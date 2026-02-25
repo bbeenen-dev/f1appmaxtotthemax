@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import Link from 'next/link';
 
-// 1. De feitelijke inhoud van je dashboard in een aparte component
+// 1. De feitelijke interface. Deze component mag 'async' zijn en de database checken.
 async function DashboardContent() {
   const supabase = await createClient();
 
@@ -13,7 +13,7 @@ async function DashboardContent() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Als je niet bent ingelogd, ga je direct naar de inlogpagina
+  // Als de gebruiker niet is ingelogd, sturen we ze naar de login
   if (!user) {
     return redirect('/login');
   }
@@ -31,7 +31,7 @@ async function DashboardContent() {
         {/* MENU ITEM 1: NEXT EVENT */}
         <Link 
           href="/event/next" 
-          className="group block p-6 bg-[#15151e] border-l-4 border-[#e10600] rounded-r-xl hover:bg-[#1e1e2d] transition-all shadow-lg"
+          className="group block p-6 bg-[#15151e] border-l-4 border-[#e10600] rounded-r-xl hover:bg-[#1e1e2d] transition"
         >
           <div className="flex justify-between items-center">
             <div>
@@ -45,7 +45,7 @@ async function DashboardContent() {
         {/* MENU ITEM 2: RACEKALENDER */}
         <Link 
           href="/kalender" 
-          className="group block p-6 bg-[#15151e] border-l-4 border-slate-600 rounded-r-xl hover:bg-[#1e1e2d] transition-all shadow-lg"
+          className="group block p-6 bg-[#15151e] border-l-4 border-slate-600 rounded-r-xl hover:bg-[#1e1e2d] transition"
         >
           <div className="flex justify-between items-center">
             <div>
@@ -60,11 +60,12 @@ async function DashboardContent() {
   );
 }
 
-// 2. De HomePage die de Suspense-grens aangeeft voor de build
+// 2. De HomePage export. Deze is simpel en 'omhelst' de content met Suspense.
 export default function HomePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#0f111a] flex items-center justify-center">
+        {/* Een strakke rode spinner voor die F1 vibe tijdens het laden */}
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#e10600]"></div>
       </div>
     }>

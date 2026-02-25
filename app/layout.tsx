@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import Navbar from "@/components/navbar"; // Aangepast naar hoofdletter N
+import Navbar from "@/components/navbar"; // Nu écht met de hoofdletter N
 import { Suspense } from "react";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -23,7 +23,7 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -36,11 +36,11 @@ export default async function RootLayout({
           defaultTheme="dark" 
           enableSystem={false}
         >
-          {/* We wikkelen de Navbar in Suspense. 
-              Dit lost de "Uncached data outside of Suspense" fout op 
-              omdat Next.js nu weet dat de Navbar even mag 'laden'.
+          {/* De Suspense boundary hier is essentieel voor Next.js 16. 
+            Het zorgt ervoor dat de auth-check in de Navbar de rest van de 
+            pagina-opbouw niet blokkeert tijdens de build.
           */}
-          <Suspense fallback={<div className="h-16 bg-[#15151e] animate-pulse" />}>
+          <Suspense fallback={<div className="h-16 bg-[#15151e] animate-pulse w-full" />}>
             <Navbar />
           </Suspense>
           
