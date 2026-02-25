@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import Navbar from "@/components/navbar"; // Zorg dat dit bestand bestaat in /components/Navbar.tsx
+import Navbar from "@/components/navbar"; // Aangepast naar hoofdletter N
+import { Suspense } from "react";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -35,8 +36,13 @@ export default async function RootLayout({
           defaultTheme="dark" 
           enableSystem={false}
         >
-          {/* De Navbar is een Server Component die zelf de sessie en admin-check regelt */}
-          <Navbar />
+          {/* We wikkelen de Navbar in Suspense. 
+              Dit lost de "Uncached data outside of Suspense" fout op 
+              omdat Next.js nu weet dat de Navbar even mag 'laden'.
+          */}
+          <Suspense fallback={<div className="h-16 bg-[#15151e] animate-pulse" />}>
+            <Navbar />
+          </Suspense>
           
           <main className="min-h-screen">
             {children}
