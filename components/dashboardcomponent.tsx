@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useEffect, useState } from 'react'
 import { getUserSession } from '@/app/actions'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client' // Zorg dat deze import klopt met je utils
+import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 
 export default function DashboardComponents() {
