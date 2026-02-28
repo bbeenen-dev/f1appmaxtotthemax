@@ -16,15 +16,20 @@ export default async function Navbar() {
   }
 
   return (
-    <nav className="bg-[#15151e] border-t border-slate-800 p-4 fixed bottom-0 left-0 right-0 z-50">
+    <nav className="bg-[#15151e] border-t border-slate-800 p-4 fixed bottom-0 left-0 right-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
       <div className="max-w-6xl mx-auto flex justify-center items-center">
-        <div className="flex gap-8 sm:gap-12 text-[10px] font-bold uppercase tracking-[0.2em] items-center text-slate-300">
+        {/* font-f1 toegevoegd voor die echte race-look in het menu */}
+        <div className="flex gap-6 sm:gap-10 font-f1 text-[10px] font-bold uppercase tracking-[0.2em] items-center text-slate-300">
+          
           <Link href="/" className="hover:text-[#e10600] transition-colors">
             Home
           </Link>
-          <Link href="/kalender" className="hover:text-[#e10600] transition-colors">
+
+          {/* Aangepast naar /races in plaats van /kalender */}
+          <Link href="/races" className="hover:text-[#e10600] transition-colors">
             Kalender
           </Link>
+
           <Link href="/info" className="hover:text-[#e10600] transition-colors">
             Info
           </Link>
