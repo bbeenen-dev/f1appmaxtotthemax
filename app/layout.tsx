@@ -17,12 +17,12 @@ const geistSans = Geist({
 const f1Font = localFont({
   src: [
     {
-      path: "./fonts/f1-regular.woff2", // Controleer of de bestandsnaam klopt!
+      path: "./fonts/formula1-regular.ttf", // Controleer of de bestandsnaam klopt!
       weight: "400",
       style: "normal",
     },
     {
-      path: "./fonts/f1-bold.woff2",
+      path: "./fonts/formula1-bold.ttf",
       weight: "700",
       style: "normal",
     },
