@@ -10,33 +10,34 @@ export const dynamic = 'force-dynamic'
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#0f111a] text-white pb-32">
-      {/* HERO SECTIE MET PANORAMAFOTO */}
-      <div className="relative h-[40vh] md:h-[50vh] w-full overflow-hidden">
+      {/* COMPACTE HERO SECTIE MET PANORAMAFOTO */}
+      {/* Hoogte verlaagd van [40vh]/[50vh] naar [25vh] universeel */}
+      <div className="relative h-[25vh] w-full overflow-hidden border-b border-slate-800/50 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <Image 
-          src="/hero-2026.JPG" 
-          alt="F1 2026 Hero"
+          src="/hero-2026.JPG" // Zorg dat de foto in /public staat!
+          alt="F1 2026 Hero Panorama"
           fill
           priority
-          className="object-cover object-center transition-transform duration-1000 hover:scale-105"
+          className="object-cover object-center transition-transform duration-1000 hover:scale-105 filter saturate-[0.8] brightness-[0.7]" // Subtiele tint-aanpassing
         />
         
         {/* Gradients om de foto te blenden met de donkere achtergrond */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0f111a]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#0f111a]" />
+        
         {/* Header bovenop de foto */}
         <header className="absolute inset-0 flex flex-col justify-center items-center text-center p-4">
-          <div className="w-16 h-1 bg-[#e10600] mb-2 shadow-[0_0_15px_rgba(225,6,0,0.8)]"></div>
-          <h1 className="text-3xl md:text-4xl font-f1 font-black italic text-white uppercase tracking-tighter drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+          <div className="w-12 h-0.5 bg-[#e10600] mb-1.5 shadow-[0_0_10px_rgba(225,6,0,0.8)]"></div>
+          <h1 className="text-3xl md:text-4xl font-f1 font-black italic text-white uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             f1 <span className="text-[#e10600]">poule</span>
           </h1>
-          <p className="text-[10px] font-f1 uppercase tracking-[0.4em] text-slate-300 mt-2 opacity-80">
+          <p className="text-[9px] font-f1 uppercase tracking-[0.4em] text-slate-300 mt-1 opacity-70">
             Season 2026
           </p>
         </header>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-10 p-4 md:p-8 -mt-10 relative z-10">
+      {/* De content-wrapper heeft minder negatieve margin nodig nu de hero lager is */}
+      <div className="max-w-4xl mx-auto space-y-10 p-4 md:p-8 -mt-4 relative z-10">
         
         {/* SECTION: VOLGENDE RACE (Next Event) */}
         <section>

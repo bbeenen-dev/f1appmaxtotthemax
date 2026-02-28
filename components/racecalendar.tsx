@@ -11,7 +11,7 @@ export default async function RaceCalendar() {
     .select('*')
     .gt('fp1_start', now)
     .order('fp1_start', { ascending: true })
-    .limit(5)
+    .limit(3)
 
   // Haal ook de voorspellingen op voor de voortgangs-streepjes
   const { data: { user } } = await supabase.auth.getUser()
