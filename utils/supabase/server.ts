@@ -10,19 +10,21 @@ export async function createClient() {
     {
       cookies: {
         getAll() {
-          // Haal alle beschikbare cookies op uit de browser-request
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
+        /**
+         * We gebruiken 'any' om de strikte type-controle van Next.js 15 
+         * op de cookie-objecten te omzeilen.
+         */
+        setAll(cookiesToSet: any) {
           try {
-            // Probeer de cookies te updaten (werkt alleen in Server Actions/Route Handlers)
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach((cookie: any) => {
+              const { name, value, options } = cookie
               cookieStore.set(name, value, options)
-            )
+            })
           } catch {
-            // In Server Components (zoals je HomePage) mag je geen cookies zetten.
-            // De middleware handelt het verversen van de sessie al af, 
-            // dus dit 'foutje' kunnen we hier veilig negeren.
+            // In Server Components mogen cookies niet aangepast worden.
+            // Dit wordt opgevangen door de middleware.
           }
         },
       },
