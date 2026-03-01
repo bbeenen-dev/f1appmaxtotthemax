@@ -64,6 +64,7 @@ export default function RaceCardPage({ params }: PageProps) {
         const user = session?.user;
 
         if (user && isMounted) {
+          // Check status in de 3 verschillende tabellen
           const [qualyCheck, sprintCheck, raceCheck] = await Promise.all([
             supabase.from('predictions_qualifying').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
             supabase.from('predictions_sprint').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
@@ -116,7 +117,7 @@ export default function RaceCardPage({ params }: PageProps) {
             {race?.race_name}
           </h1>
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">
-            {race?.city_name} • Predict
+            {race?.city_name} • Dashboard
           </p>
 
           <div className="absolute -right-2 -top-6 font-f1 text-6xl md:text-8xl font-black italic text-white/[0.02] select-none pointer-events-none uppercase whitespace-nowrap overflow-hidden max-w-full">
@@ -131,20 +132,18 @@ export default function RaceCardPage({ params }: PageProps) {
         )}
 
         <div className="grid gap-6">
-          {/* VOLGORDE AANGEPAST: SPRINT -> QUALY -> RACE */}
-          
-          {/* 1. SPRINT (Indien van toepassing) */}
+          {/* SPRINT (Alleen indien in database) */}
           {race?.sprint_race_start && (
             <PredictionCard 
               title="Sprint Race" 
-              subtitle="Short Burst Points"
+              subtitle="Short Burst Points • Top 8"
               href={`/races/${raceId}/predict/sprint`}
               isDone={status.sprint}
               accentColor="bg-orange-500"
             />
           )}
 
-          {/* 2. QUALIFYING */}
+          {/* QUALIFYING */}
           <PredictionCard 
             title="Qualifying" 
             subtitle="Top 3 Shootout"
@@ -153,10 +152,10 @@ export default function RaceCardPage({ params }: PageProps) {
             accentColor="bg-red-600"
           />
 
-          {/* 3. GRAND PRIX */}
+          {/* GRAND PRIX */}
           <PredictionCard 
             title="Grand Prix" 
-            subtitle="Main Event Top 10"
+            subtitle="Main Event • Top 10 + Fastest Lap"
             href={`/races/${raceId}/predict/race`}
             isDone={status.race}
             accentColor="bg-[#e10600]"
@@ -174,14 +173,13 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
         
-        {/* Subtiele F1 Border - Geen groen meer in de randen */}
+        {/* F1 Conic Border Effect */}
         <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
         
-        {/* Kaart Inhoud - Altijd donkergrijs */}
+        {/* Kaart Inhoud */}
         <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
           <div className="flex justify-between items-center">
             <div>
-              {/* Titel kleurt groen bij voltooiing, anders wit/rood op hover */}
               <h2 className={`text-2xl font-f1 font-black italic uppercase leading-none mb-1 transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>
                 {title}
               </h2>
@@ -191,9 +189,7 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
             <div className="flex items-center gap-4">
               {isDone ? (
                 <div className="flex items-center gap-2">
-                  {/* Woord Ready in groen */}
                   <span className="font-f1 text-[10px] text-green-500 font-bold italic tracking-tighter uppercase">Ready</span>
-                  {/* Vinkje in groen (zonder zwarte cirkel voor cleaner effect) */}
                   <div className="text-green-500">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -208,7 +204,7 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
             </div>
           </div>
 
-          {/* De accent-lijn onderaan: kleurt groen bij klaar, anders de accentkleur */}
+          {/* Dynamische Accent-lijn onderaan */}
           <div className={`absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
         </div>
       </div>
