@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'; // Check dit pad!
+import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 
@@ -58,24 +58,27 @@ export default async function CalendarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-white p-6 md:p-12">
+    // Achtergrondkleur aangepast naar #0f111a en pb-32 toegevoegd voor de navbar
+    <div className="min-h-screen bg-[#0f111a] text-white p-6 md:p-12 pb-32">
       <div className="max-w-5xl mx-auto">
-        <header className="mb-12">
-          <h1 className="font-f1 text-4xl md:text-6xl font-black italic uppercase tracking-tighter border-l-8 border-[#e10600] pl-6">
+        
+        {/* Header met nieuwe rode accentbalk */}
+        <header className="mb-12 relative">
+          <div className="w-16 md:w-24 h-1 bg-[#e10600] mb-4 shadow-[0_0_15px_rgba(225,6,0,0.5)]"></div>
+          <h1 className="font-f1 text-4xl md:text-6xl font-black italic uppercase tracking-tighter">
             F1 Kalender <span className="text-slate-500">2026</span>
           </h1>
         </header>
 
         {!races || races.length === 0 ? (
           <div className="bg-[#161a23] border border-dashed border-slate-700 p-12 rounded-3xl text-center">
-            <p className="text-slate-500 font-medium">De kalender wordt geladen of is leeg...</p>
+            <p className="text-slate-500 font-medium font-f1 italic uppercase tracking-widest text-xs">De kalender wordt geladen...</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {races.map((race: Race) => {
               const preds = allPredictions.filter(p => p.race_id === race.id);
               
-              // Check of alle benodigde voorspellingen gedaan zijn
               const hasQualy = preds.some(p => p.type === 'qualy');
               const hasRace = preds.some(p => p.type === 'race');
               const hasSprint = preds.some(p => p.type === 'sprint');
@@ -89,7 +92,7 @@ export default async function CalendarPage() {
                 <Link 
                   key={race.id} 
                   href={`/races/${race.id}`} 
-                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block"
+                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.1)]"
                 >
                   {/* De Gradient Border - Kleurt groen bij complete voorspelling */}
                   <div className={`absolute inset-0 transition-opacity duration-500 ${
@@ -101,44 +104,44 @@ export default async function CalendarPage() {
                   {/* Kaart Inhoud */}
                   <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full transition-colors group-hover:bg-[#1c222d]">
                     <div className="flex justify-between items-start mb-4">
-                      <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-xs tracking-widest`}>
+                      <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-[10px] tracking-widest leading-none`}>
                         Round {race.round}
                       </span>
                       {isComplete && (
                         <div className="bg-green-500/20 text-green-500 p-1 rounded-full">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
                       )}
                     </div>
                     
-                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight group-hover:text-[#e10600] transition-colors">
+                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight group-hover:text-white transition-colors">
                       {race.race_name}
                     </h2>
                     
                     <div className="flex items-center gap-2 mb-6">
-                      <p className="text-slate-300 font-bold uppercase text-[10px] tracking-wider italic">
+                      <p className="text-slate-300 font-f1 font-black uppercase text-[9px] tracking-wider italic">
                         {race.city_name}
                       </p>
                       <span className="text-slate-700 text-[10px]">•</span>
-                      <p className="text-slate-500 text-[10px] font-medium uppercase">
+                      <p className="text-slate-500 font-f1 text-[9px] font-medium uppercase tracking-widest">
                         {formatDateRange(race.fp1_start, race.race_start)}
                       </p>
                     </div>
 
-                    {/* Voortgangs-indicators (De drie streepjes) */}
+                    {/* Voortgangs-indicators */}
                     <div className="flex gap-2 mt-auto">
-                      <div className={`h-1.5 w-8 rounded-full transition-colors ${hasQualy ? 'bg-green-500' : 'bg-slate-800'}`} title="Qualifying" />
+                      <div className={`h-1.5 w-8 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}`} />
                       {needsSprint && (
-                        <div className={`h-1.5 w-8 rounded-full transition-colors ${hasSprint ? 'bg-green-500' : 'bg-slate-800'}`} title="Sprint" />
+                        <div className={`h-1.5 w-8 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}`} />
                       )}
-                      <div className={`h-1.5 w-8 rounded-full transition-colors ${hasRace ? 'bg-green-500' : 'bg-slate-800'}`} title="Race" />
+                      <div className={`h-1.5 w-8 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}`} />
                     </div>
                   </div>
                   
                   {/* Groot rondenummer op de achtergrond */}
-                  <div className={`absolute -right-2 -bottom-4 font-f1 text-8xl font-black italic transition-colors select-none pointer-events-none opacity-5 ${
+                  <div className={`absolute -right-2 -bottom-4 font-f1 text-8xl font-black italic transition-colors select-none pointer-events-none opacity-[0.03] uppercase ${
                     isComplete ? 'text-green-500' : 'text-white'
                   }`}>
                     {race.round}
