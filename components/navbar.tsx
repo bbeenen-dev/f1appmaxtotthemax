@@ -16,36 +16,37 @@ export default async function Navbar() {
   }
 
   return (
-    <nav className="bg-[#15151e] border-t border-slate-800 p-4 fixed bottom-0 left-0 right-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-      <div className="max-w-6xl mx-auto flex justify-center items-center">
-        {/* font-f1 toegevoegd voor die echte race-look in het menu */}
-        <div className="flex gap-6 sm:gap-10 font-f1 text-[10px] font-bold uppercase tracking-[0.2em] items-center text-slate-300">
+    <nav className="bg-[#161a23]/90 backdrop-blur-md border-t border-white/5 p-5 fixed bottom-0 left-0 right-0 z-50 shadow-[0_-15px_40px_rgba(0,0,0,0.6)]">
+      <div className="max-w-4xl mx-auto flex justify-center items-center">
+        {/* font-f1 voor die authentieke racing look */}
+        <div className="flex gap-6 sm:gap-12 font-f1 text-[10px] font-black uppercase tracking-[0.25em] items-center text-slate-400">
           
-          <Link href="/" className="hover:text-[#e10600] transition-colors">
+          <Link href="/" className="hover:text-white transition-colors duration-300">
             Home
           </Link>
 
-          {/* Aangepast naar /races in plaats van /kalender */}
-          <Link href="/races" className="hover:text-[#e10600] transition-colors">
+          <Link href="/races" className="hover:text-white transition-colors duration-300">
             Kalender
           </Link>
 
-          <Link href="/info" className="hover:text-[#e10600] transition-colors">
+          <Link href="/info" className="hover:text-white transition-colors duration-300">
             Info
           </Link>
           
           {isAdmin && (
-            <Link href="/admin" className="text-[#e10600] border border-[#e10600] px-2 py-0.5 rounded italic hover:bg-[#e10600] hover:text-white transition-all">
+            <Link href="/admin" className="text-[#e10600] px-2 py-0.5 border border-[#e10600]/30 rounded-sm italic hover:bg-[#e10600] hover:text-white transition-all duration-300">
               Admin
             </Link>
           )}
 
+          <div className="h-4 w-[1px] bg-slate-800 mx-1" /> {/* Verticale scheidingslijn */}
+
           {user ? (
-            <Link href="/logout" className="text-slate-500 hover:text-white transition-colors">
-              Uitloggen
+            <Link href="/logout" className="text-slate-500 hover:text-white transition-colors duration-300 italic lowercase tracking-normal font-sans">
+              uitloggen
             </Link>
           ) : (
-            <Link href="/login" className="text-[#e10600] font-black underline decoration-2 underline-offset-4">
+            <Link href="/login" className="text-[#e10600] font-black italic">
               Inloggen
             </Link>
           )}
