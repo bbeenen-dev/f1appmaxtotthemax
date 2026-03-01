@@ -25,10 +25,8 @@ export default function PredictionPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [fastestLap, setFastestLap] = useState<string>("");
-  const [enabled, setEnabled] = useState(false); // Fix voor Next.js hydration
+  const [enabled, setEnabled] = useState(false);
 
-  // Configuratie per type op basis van jouw database-velden
   const configMap: Record<string, any> = {
     sprint: { 
       title: "Sprint Top 8", 
@@ -39,7 +37,7 @@ export default function PredictionPage() {
     qualy: { 
       title: "Qualifying Top 3", 
       limit: 3, 
-      table: "predictions_qualifying", // Let op: je noemde predictions_qualify, check of dit klopt met je tabelnaam
+      table: "predictions_qualifying", 
       field: "top_3_drivers" 
     },
     race: { 
@@ -54,7 +52,6 @@ export default function PredictionPage() {
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Haal de coureurs op
       const { data: driversData } = await supabase
         .from("drivers")
         .select("driver_id, driver_name, team_id")
@@ -63,7 +60,6 @@ export default function PredictionPage() {
       
       if (driversData) setDrivers(driversData);
 
-      // 2. Haal bestaande voorspelling op (als die er al is)
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: existingPred } = await supabase
@@ -74,7 +70,6 @@ export default function PredictionPage() {
           .maybeSingle();
 
         if (existingPred) {
-          // Als er al een voorspelling is, zetten we de opgeslagen drivers bovenaan
           const savedIds = existingPred[config.field] as string[];
           if (savedIds && driversData) {
             const reordered = [...driversData].sort((a, b) => {
@@ -87,14 +82,11 @@ export default function PredictionPage() {
             });
             setDrivers(reordered);
           }
-          if (existingPred.fastest_lap_driver) {
-            setFastestLap(existingPred.fastest_lap_driver);
-          }
         }
       }
 
       setLoading(false);
-      setEnabled(true); // Activeer DnD pas na data-fetch en mount
+      setEnabled(true);
     }
     fetchData();
   }, [raceId, type, config.table, config.field]);
@@ -125,10 +117,6 @@ export default function PredictionPage() {
       [config.field]: topDriversIds,
     };
 
-    if (type === "race") {
-      payload.fastest_lap_driver = fastestLap || topDriversIds[0];
-    }
-
     const { error } = await supabase
       .from(config.table)
       .upsert(payload, { onConflict: 'user_id, race_id' });
@@ -153,19 +141,27 @@ export default function PredictionPage() {
     <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
       <div className="max-w-xl mx-auto">
         
-        {/* Header */}
-        <header className="mb-8">
-          <button onClick={() => router.back()} className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-6 tracking-widest hover:text-[#e10600] transition-colors">
-            <span className="text-lg">←</span> Terug naar overzicht
-          </button>
-          <div className="w-12 h-1 bg-[#e10600] mb-3 shadow-[0_0_15px_rgba(225,6,0,0.5)]"></div>
-          <h1 className="font-f1 text-4xl font-black italic uppercase tracking-tighter leading-none">
-            Predict <span className="text-[#e10600]">{type}</span>
-          </h1>
-          <p className="text-slate-500 text-[10px] font-f1 uppercase tracking-[0.2em] mt-2 italic">
-            Versleep de coureurs naar de juiste posities
-          </p>
-        </header>
+        {/* Sticky Header & Save Button */}
+        <div className="sticky top-0 z-[100] bg-[#0f111a] pt-4 pb-6 border-b border-slate-800 mb-8">
+          <div className="flex items-center justify-between gap-4">
+            <header>
+              <button onClick={() => router.back()} className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-2 tracking-widest hover:text-[#e10600] transition-colors">
+                <span className="text-lg">←</span> Terug
+              </button>
+              <h1 className="font-f1 text-2xl font-black italic uppercase tracking-tighter leading-none">
+                Predict <span className="text-[#e10600]">{type}</span>
+              </h1>
+            </header>
+
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-shrink-0 bg-[#e10600] hover:bg-white hover:text-[#e10600] disabled:opacity-30 text-white font-f1 font-black italic uppercase px-6 py-3 rounded-xl shadow-lg transition-all duration-300 tracking-widest text-[10px]"
+            >
+              {saving ? "Opslaan..." : "Bevestigen"}
+            </button>
+          </div>
+        </div>
 
         {/* Drag & Drop Area */}
         <DragDropContext onDragEnd={onDragEnd}>
@@ -174,59 +170,59 @@ export default function PredictionPage() {
               <div 
                 {...provided.droppableProps} 
                 ref={provided.innerRef} 
-                className="space-y-3 pr-2 custom-scrollbar overflow-y-auto max-h-[65vh]"
+                className="space-y-3"
               >
                 {drivers.map((driver, index) => {
                   const isInPointsZone = index < config.limit;
+                  const isLastPointPos = index === config.limit - 1;
                   
                   return (
-                    <Draggable key={driver.driver_id} draggableId={driver.driver_id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`relative flex items-center p-4 rounded-xl border transition-all duration-200 ${
-                            snapshot.isDragging 
-                              ? "bg-[#1c222d] border-[#e10600] scale-[1.02] z-50 shadow-2xl" 
-                              : isInPointsZone 
-                                ? "bg-[#161a23] border-slate-700/50 shadow-lg" 
-                                : "bg-[#0f111a] border-slate-800/40 opacity-40 grayscale-[0.5]"
-                          }`}
-                        >
-                          {/* Positie Nummer */}
-                          <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-800"}`}>
-                            {index + 1}
-                          </div>
-
-                          {/* Coureur Info */}
-                          <div className="flex-1">
-                            <p className="font-f1 font-black uppercase italic text-sm tracking-tight text-white">
-                              {driver.driver_name}
-                            </p>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">
-                              {driver.team_id}
-                            </p>
-                          </div>
-
-                          {/* Sleep-icoon */}
-                          <div className="text-slate-700">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                            </svg>
-                          </div>
-
-                          {/* Indicator voor puntenzone */}
-                          {isInPointsZone && index === config.limit - 1 && (
-                            <div className="absolute -bottom-4 left-0 right-0 flex justify-center pointer-events-none">
-                              <span className="bg-[#e10600] text-white text-[7px] px-2 py-0.5 rounded-full font-f1 font-black uppercase italic">
-                                Points Cut-off
-                              </span>
+                    <div key={driver.driver_id}>
+                      <Draggable draggableId={driver.driver_id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`relative flex items-center p-4 rounded-xl border transition-all duration-200 ${
+                              snapshot.isDragging 
+                                ? "bg-[#1c222d] border-[#e10600] scale-[1.02] z-50 shadow-2xl" 
+                                : isInPointsZone 
+                                  ? "bg-[#161a23] border-slate-700/50 shadow-lg" 
+                                  : "bg-[#0f111a] border-slate-800/40 opacity-40 grayscale-[0.5]"
+                            }`}
+                          >
+                            <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-800"}`}>
+                              {index + 1}
                             </div>
-                          )}
+
+                            <div className="flex-1">
+                              <p className="font-f1 font-black uppercase italic text-sm tracking-tight text-white">
+                                {driver.driver_name}
+                              </p>
+                              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">
+                                {driver.team_id}
+                              </p>
+                            </div>
+
+                            <div className="text-slate-700">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+
+                      {/* Fijne rode lijn na de laatste puntenpositie */}
+                      {isLastPointPos && (
+                        <div className="my-6 flex items-center gap-4">
+                          <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
+                          <span className="text-[8px] font-f1 font-black italic text-[#e10600] uppercase tracking-widest opacity-70">Cut-off</span>
+                          <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
                         </div>
                       )}
-                    </Draggable>
+                    </div>
                   );
                 })}
                 {provided.placeholder}
@@ -234,56 +230,7 @@ export default function PredictionPage() {
             )}
           </Droppable>
         </DragDropContext>
-
-        {/* Extra: Snelste Ronde (Alleen bij Race) */}
-        {type === "race" && (
-          <div className="mt-12 p-5 bg-[#161a23] rounded-2xl border border-slate-700/50 shadow-inner">
-            <label className="block font-f1 text-[10px] font-black uppercase text-[#e10600] mb-3 tracking-widest italic">
-              Snelste Ronde Award
-            </label>
-            <select 
-              className="w-full bg-[#0f111a] border border-slate-800 p-4 rounded-xl text-white font-f1 italic text-sm outline-none focus:border-[#e10600] transition-colors appearance-none cursor-pointer"
-              value={fastestLap}
-              onChange={(e) => setFastestLap(e.target.value)}
-            >
-              <option value="">Kies coureur voor de Fastest Lap...</option>
-              {drivers.map(d => (
-                <option key={d.driver_id} value={d.driver_id}>{d.driver_name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Opslaan Knop */}
-        <div className="mt-10">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-[#e10600] hover:bg-white hover:text-[#e10600] disabled:opacity-30 text-white font-f1 font-black italic uppercase py-5 rounded-2xl shadow-[0_10px_30px_rgba(225,6,0,0.2)] transition-all duration-300 tracking-[0.2em] text-sm"
-          >
-            {saving ? "Data versturen..." : "Voorspelling Bevestigen"}
-          </button>
-        </div>
-
       </div>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 14px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #0f111a;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1c222d;
-          border-radius: 10px;
-          border: 4px solid #0f111a;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #e10600;
-        }
-      `}</style>
     </div>
   );
 }
