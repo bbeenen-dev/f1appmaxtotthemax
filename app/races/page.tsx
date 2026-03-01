@@ -92,7 +92,7 @@ export default async function CalendarPage() {
                 <Link 
                   key={race.id} 
                   href={`/races/${race.id}`} 
-                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.1)]"
+                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.15)]"
                 >
                   {/* De Gradient Border - Kleurt groen bij complete voorspelling */}
                   <div className={`absolute inset-0 transition-opacity duration-500 ${
@@ -102,7 +102,7 @@ export default async function CalendarPage() {
                   }`} />
 
                   {/* Kaart Inhoud */}
-                  <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full transition-colors group-hover:bg-[#1c222d]">
+                  <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d]">
                     <div className="flex justify-between items-start mb-4">
                       <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-[10px] tracking-widest leading-none`}>
                         Round {race.round}
@@ -116,11 +116,11 @@ export default async function CalendarPage() {
                       )}
                     </div>
                     
-                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight group-hover:text-white transition-colors">
+                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight text-white group-hover:text-[#e10600] transition-colors">
                       {race.race_name}
                     </h2>
                     
-                    <div className="flex items-center gap-2 mb-6">
+                    <div className="flex items-center gap-2 mb-8">
                       <p className="text-slate-300 font-f1 font-black uppercase text-[9px] tracking-wider italic">
                         {race.city_name}
                       </p>
@@ -130,13 +130,28 @@ export default async function CalendarPage() {
                       </p>
                     </div>
 
-                    {/* Voortgangs-indicators */}
-                    <div className="flex gap-2 mt-auto">
-                      <div className={`h-1.5 w-8 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}`} />
+                    {/* VERBETERDE INDICATORS: Chronologische volgorde (Sprint -> Qualy -> Race) */}
+                    <div className="flex gap-3 mt-auto relative z-10">
+                      
+                      {/* 1. SPRINT (Conditioneel, als eerste getoond) */}
                       {needsSprint && (
-                        <div className={`h-1.5 w-8 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}`} />
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Sprint</span>
+                          <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                        </div>
                       )}
-                      <div className={`h-1.5 w-8 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}`} />
+
+                      {/* 2. QUALY */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
+                        <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                      </div>
+
+                      {/* 3. RACE */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Race</span>
+                        <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                      </div>
                     </div>
                   </div>
                   
