@@ -3,7 +3,6 @@
 import { use, useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 // DIT IS CRUCIAAL VOOR NEXT.JS 15/16
 export const dynamic = "force-dynamic";
@@ -12,7 +11,6 @@ interface RaceData {
   id: string;
   race_name: string;
   city_name: string;
-  country_code: string;
   sprint_race_start: string | null;
   round: number;
 }
@@ -54,10 +52,10 @@ export default function RaceCardPage({ params }: PageProps) {
       try {
         setLoading(true);
         
-        // 1. Haal race info op inclusief extra velden voor de header
+        // 1. Haal race info op - country_code verwijderd uit select
         const { data: raceData, error: raceError } = await supabase
           .from('races')
-          .select('id, race_name, city_name, country_code, sprint_race_start, round')
+          .select('id, race_name, city_name, sprint_race_start, round')
           .eq('id', raceId)
           .single();
 
@@ -113,7 +111,7 @@ export default function RaceCardPage({ params }: PageProps) {
           <span className="text-lg transition-transform group-hover:-translate-x-1">←</span> Terug naar Kalender
         </Link>
 
-        {/* Race Header: Geïnspireerd op de nieuwe stijl */}
+        {/* Race Header */}
         <header className="mb-12 relative">
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase tracking-tighter">
@@ -128,9 +126,9 @@ export default function RaceCardPage({ params }: PageProps) {
             {race?.city_name} • GP Card
           </p>
 
-          {/* Groot landcode op de achtergrond */}
-          <div className="absolute -right-2 -top-6 font-f1 text-9xl font-black italic text-white/[0.03] select-none pointer-events-none uppercase">
-            {race?.country_code}
+          {/* Decoratieve achtergrondtekst: Gebruikt nu race_name ipv country_code */}
+          <div className="absolute -right-2 -top-6 font-f1 text-6xl md:text-8xl font-black italic text-white/[0.02] select-none pointer-events-none uppercase whitespace-nowrap overflow-hidden max-w-full">
+            {race?.race_name}
           </div>
         </header>
 
@@ -142,8 +140,6 @@ export default function RaceCardPage({ params }: PageProps) {
 
         {/* Voorspellings Opties */}
         <div className="grid gap-6">
-          
-          {/* OPTIE 1: QUALIFYING */}
           <PredictionCard 
             title="Qualifying" 
             subtitle="Top 3 Shootout"
@@ -152,7 +148,6 @@ export default function RaceCardPage({ params }: PageProps) {
             accentColor="bg-red-600"
           />
 
-          {/* OPTIE 2: SPRINT (Conditioneel) */}
           {race?.sprint_race_start && (
             <PredictionCard 
               title="Sprint Race" 
@@ -163,7 +158,6 @@ export default function RaceCardPage({ params }: PageProps) {
             />
           )}
 
-          {/* OPTIE 3: GRAND PRIX */}
           <PredictionCard 
             title="Grand Prix" 
             subtitle="Main Event Top 10"
@@ -171,24 +165,19 @@ export default function RaceCardPage({ params }: PageProps) {
             isDone={status.race}
             accentColor="bg-[#e10600]"
           />
-
         </div>
       </div>
     </div>
   );
 }
 
-// Sub-component voor de kaarten om de code schoon te houden
 function PredictionCard({ title, subtitle, href, isDone, accentColor }: { 
   title: string, subtitle: string, href: string, isDone: boolean, accentColor: string 
 }) {
   return (
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500 group-hover:shadow-[0_0_30px_rgba(225,6,0,0.15)]">
-        
-        {/* De dynamische F1 Border */}
         <div className={`absolute inset-0 transition-opacity duration-500 ${isDone ? 'bg-green-500/40' : 'bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-30 group-hover:opacity-100'}`} />
-        
         <div className={`relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors ${isDone ? 'bg-green-500/[0.03]' : 'group-hover:bg-[#1c222d]'}`}>
           <div className="flex justify-between items-center">
             <div>
@@ -197,7 +186,6 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
               </h2>
               <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
             </div>
-
             <div className="flex items-center gap-4">
               {isDone ? (
                 <div className="flex items-center gap-2">
@@ -215,8 +203,6 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
               )}
             </div>
           </div>
-
-          {/* De accent-lijn aan de onderkant */}
           <div className={`absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
         </div>
       </div>
