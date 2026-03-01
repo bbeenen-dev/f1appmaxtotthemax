@@ -4,7 +4,6 @@ import { use, useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
 
-// DIT IS CRUCIAAL VOOR NEXT.JS 15/16
 export const dynamic = "force-dynamic";
 
 interface RaceData {
@@ -52,7 +51,6 @@ export default function RaceCardPage({ params }: PageProps) {
       try {
         setLoading(true);
         
-        // 1. Haal race info op - country_code verwijderd uit select
         const { data: raceData, error: raceError } = await supabase
           .from('races')
           .select('id, race_name, city_name, sprint_race_start, round')
@@ -62,7 +60,6 @@ export default function RaceCardPage({ params }: PageProps) {
         if (raceError) throw raceError;
         if (isMounted) setRace(raceData);
 
-        // 2. Check sessie en voorspellingen
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
 
@@ -82,9 +79,7 @@ export default function RaceCardPage({ params }: PageProps) {
           }
         }
       } catch (err: any) {
-        if (isMounted) {
-          setDbError(err.message || "Er ging iets mis.");
-        }
+        if (isMounted) setDbError(err.message || "Er ging iets mis.");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -106,12 +101,10 @@ export default function RaceCardPage({ params }: PageProps) {
     <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
       <div className="max-w-2xl mx-auto">
         
-        {/* Navigatie Terug */}
         <Link href="/races" className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-8 tracking-[0.2em] hover:text-[#e10600] transition-colors">
           <span className="text-lg transition-transform group-hover:-translate-x-1">←</span> Terug naar Kalender
         </Link>
 
-        {/* Race Header */}
         <header className="mb-12 relative">
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase tracking-tighter">
@@ -123,31 +116,24 @@ export default function RaceCardPage({ params }: PageProps) {
             {race?.race_name}
           </h1>
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">
-            {race?.city_name} • GP Card
+            {race?.city_name} • Predict
           </p>
 
-          {/* Decoratieve achtergrondtekst: Gebruikt nu race_name ipv country_code */}
           <div className="absolute -right-2 -top-6 font-f1 text-6xl md:text-8xl font-black italic text-white/[0.02] select-none pointer-events-none uppercase whitespace-nowrap overflow-hidden max-w-full">
             {race?.race_name}
           </div>
         </header>
 
         {dbError && (
-          <div className="mb-6 p-4 bg-red-900/10 border border-red-900/50 rounded-xl text-red-500 text-[10px] font-f1 uppercase tracking-widest italic">
-            Error: {dbError}
+          <div className="mb-6 p-4 bg-red-900/10 border border-red-900/50 rounded-xl text-red-500 text-[10px] font-f1 uppercase tracking-widest italic text-center">
+            {dbError}
           </div>
         )}
 
-        {/* Voorspellings Opties */}
         <div className="grid gap-6">
-          <PredictionCard 
-            title="Qualifying" 
-            subtitle="Top 3 Shootout"
-            href={`/races/${raceId}/predict/qualy`}
-            isDone={status.qualy}
-            accentColor="bg-red-600"
-          />
-
+          {/* VOLGORDE AANGEPAST: SPRINT -> QUALY -> RACE */}
+          
+          {/* 1. SPRINT (Indien van toepassing) */}
           {race?.sprint_race_start && (
             <PredictionCard 
               title="Sprint Race" 
@@ -158,6 +144,16 @@ export default function RaceCardPage({ params }: PageProps) {
             />
           )}
 
+          {/* 2. QUALIFYING */}
+          <PredictionCard 
+            title="Qualifying" 
+            subtitle="Top 3 Shootout"
+            href={`/races/${raceId}/predict/qualy`}
+            isDone={status.qualy}
+            accentColor="bg-red-600"
+          />
+
+          {/* 3. GRAND PRIX */}
           <PredictionCard 
             title="Grand Prix" 
             subtitle="Main Event Top 10"
@@ -176,22 +172,30 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
 }) {
   return (
     <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500 group-hover:shadow-[0_0_30px_rgba(225,6,0,0.15)]">
-        <div className={`absolute inset-0 transition-opacity duration-500 ${isDone ? 'bg-green-500/40' : 'bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-30 group-hover:opacity-100'}`} />
-        <div className={`relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors ${isDone ? 'bg-green-500/[0.03]' : 'group-hover:bg-[#1c222d]'}`}>
+      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
+        
+        {/* Subtiele F1 Border - Geen groen meer in de randen */}
+        <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        {/* Kaart Inhoud - Altijd donkergrijs */}
+        <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
           <div className="flex justify-between items-center">
             <div>
+              {/* Titel kleurt groen bij voltooiing, anders wit/rood op hover */}
               <h2 className={`text-2xl font-f1 font-black italic uppercase leading-none mb-1 transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>
                 {title}
               </h2>
               <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
             </div>
+
             <div className="flex items-center gap-4">
               {isDone ? (
                 <div className="flex items-center gap-2">
+                  {/* Woord Ready in groen */}
                   <span className="font-f1 text-[10px] text-green-500 font-bold italic tracking-tighter uppercase">Ready</span>
-                  <div className="bg-green-500 p-1 rounded-full">
-                    <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                  {/* Vinkje in groen (zonder zwarte cirkel voor cleaner effect) */}
+                  <div className="text-green-500">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
@@ -203,6 +207,8 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
               )}
             </div>
           </div>
+
+          {/* De accent-lijn onderaan: kleurt groen bij klaar, anders de accentkleur */}
           <div className={`absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
         </div>
       </div>
