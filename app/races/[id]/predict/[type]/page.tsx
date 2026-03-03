@@ -26,25 +26,29 @@ export default function PredictionPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [enabled, setEnabled] = useState(false);
+    const [isPastDeadline, setIsPastDeadline] = useState(false);
 
-    const configMap: Record<string, { title: string; limit: number; table: string; field: string }> = {
+    const configMap: Record<string, { title: string; limit: number; table: string; field: string; timeField: string }> = {
         sprint: {
             title: "Sprint Top 8",
             limit: 8,
             table: "predictions_sprint",
             field: "top_8_drivers",
+            timeField: "sprint_start", // Kolomnaam in de 'races' tabel
         },
         qualy: {
             title: "Qualifying Top 3",
             limit: 3,
             table: "predictions_qualifying",
             field: "top_3_drivers",
+            timeField: "qualifying_start",
         },
         race: {
             title: "Grand Prix Top 10",
             limit: 10,
             table: "predictions_race",
             field: "top_10_drivers",
+            timeField: "race_start",
         },
     };
 
@@ -52,6 +56,22 @@ export default function PredictionPage() {
 
     useEffect(() => {
         async function fetchData() {
+            // 1. Haal race data op voor de deadline check
+            const { data: raceData } = await supabase
+                .from("races")
+                .select("*")
+                .eq("race_id", raceId)
+                .single();
+
+            if (raceData && raceData[config.timeField]) {
+                const deadline = new Date(raceData[config.timeField]);
+                const now = new Date();
+                if (now > deadline) {
+                    setIsPastDeadline(true);
+                }
+            }
+
+            // 2. Haal coureurs op
             const { data: driversData } = await supabase
                 .from("drivers")
                 .select("driver_id, driver_name, team_id")
@@ -60,6 +80,7 @@ export default function PredictionPage() {
 
             if (driversData) setDrivers(driversData);
 
+            // 3. Haal bestaande voorspelling op
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 const { data: existingPred } = await supabase
@@ -89,10 +110,10 @@ export default function PredictionPage() {
             setEnabled(true);
         }
         fetchData();
-    }, [raceId, type, config.table, config.field, supabase]);
+    }, [raceId, type, config.table, config.field, config.timeField, supabase]);
 
     const onDragEnd = (result: DropResult) => {
-        if (!result.destination) return;
+        if (!result.destination || isPastDeadline) return;
         const items = Array.from(drivers);
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);
@@ -100,6 +121,11 @@ export default function PredictionPage() {
     };
 
     const handleSave = async () => {
+        if (isPastDeadline) {
+            alert("De sessie is al gestart. Je kunt je voorspelling niet meer wijzigen.");
+            return;
+        }
+
         setSaving(true);
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -155,20 +181,27 @@ export default function PredictionPage() {
                             <h1 className="font-f1 text-2xl font-black italic uppercase tracking-tighter leading-none">
                                 Predict <span className="text-[#e10600]">{type}</span>
                             </h1>
+                            {isPastDeadline && (
+                                <p className="text-[#e10600] font-f1 italic text-[10px] uppercase mt-2">
+                                    Sessie is gestart - Wijzigen niet meer mogelijk
+                                </p>
+                            )}
                         </header>
 
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex-shrink-0 bg-[#e10600] hover:bg-white hover:text-[#e10600] disabled:opacity-30 text-white font-f1 font-black italic uppercase px-6 py-3 rounded-xl shadow-lg transition-all duration-300 tracking-widest text-[10px]"
-                        >
-                            {saving ? "Storing..." : "Bevestigen"}
-                        </button>
+                        {!isPastDeadline && (
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="flex-shrink-0 bg-[#e10600] hover:bg-white hover:text-[#e10600] disabled:opacity-30 text-white font-f1 font-black italic uppercase px-6 py-3 rounded-xl shadow-lg transition-all duration-300 tracking-widest text-[10px]"
+                            >
+                                {saving ? "Storing..." : "Bevestigen"}
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 <DragDropContext onDragEnd={onDragEnd}>
-                    <Droppable droppableId="drivers">
+                    <Droppable droppableId="drivers" isDropDisabled={isPastDeadline}>
                         {(provided) => (
                             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
                                 {drivers.map((driver, index) => {
@@ -177,31 +210,41 @@ export default function PredictionPage() {
 
                                     return (
                                         <div key={driver.driver_id}>
-                                            <Draggable draggableId={driver.driver_id} index={index}>
+                                            <Draggable 
+                                                draggableId={driver.driver_id} 
+                                                index={index} 
+                                                isDragDisabled={isPastDeadline}
+                                            >
                                                 {(provided, snapshot) => (
                                                     <div
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
-                                                        {...provided.dragHandleProps}
+                                                        {...(isPastDeadline ? {} : provided.dragHandleProps)}
                                                         className={`relative flex items-center p-4 rounded-xl border transition-all duration-200 ${snapshot.isDragging
                                                                 ? "bg-[#1c222d] border-[#e10600] scale-[1.02] z-50 shadow-2xl"
                                                                 : isInPointsZone
                                                                     ? "bg-[#161a23] border-slate-700/50 shadow-lg"
-                                                                    : "bg-[#0f111a] border-slate-800/40 opacity-40 grayscale-[0.5]"
+                                                                    : "bg-[#161a23] border-slate-800/40" // Zelfde achtergrond voor iedereen
                                                             }`}
                                                     >
-                                                        <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-800"}`}>
+                                                        <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-700"}`}>
                                                             {index + 1}
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="font-f1 font-black uppercase italic text-sm tracking-tight text-white">{driver.driver_name}</p>
+                                                            {/* Tekst vergroot naar text-base en witheid geforceerd */}
+                                                            <p className="font-f1 font-black uppercase italic text-base tracking-tight text-white opacity-100">
+                                                                {driver.driver_name}
+                                                            </p>
                                                             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">{driver.team_id}</p>
                                                         </div>
-                                                        <div className="text-slate-700">
-                                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                                            </svg>
-                                                        </div>
+                                                        
+                                                        {!isPastDeadline && (
+                                                            <div className="text-slate-700">
+                                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                                                </svg>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </Draggable>
