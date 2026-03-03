@@ -180,13 +180,13 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* 5. STANDEN */}
+        {/* 5. STANDEN - AANGEPAST */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-1 h-5 bg-[#e10600]"></div>
-              <h2 className="text-xl font-black italic uppercase text-white">Algemeen Klassement</h2>
+              <h2 className="text-2xl font-black italic uppercase text-white">F1 Leaderboard</h2>
             </div>
 
             <div className="space-y-2">
@@ -225,10 +225,6 @@ export default async function HomePage() {
                 </p>
               )}
             </div>
-            
-            <Link href="/standings" className="block text-center mt-6 text-[9px] text-slate-500 hover:text-[#e10600] font-f1 font-black uppercase tracking-[0.2em] transition-colors">
-              Bekijk de volledige stand →
-            </Link>
           </div>
         </section>
       </div>
