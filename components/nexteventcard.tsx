@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { headers } from 'next/headers';
-import Link from 'next/link'; // Import toegevoegd
+import Link from 'next/link';
 
 interface Prediction {
   race_id: number;
@@ -53,12 +53,10 @@ export default async function NextEventCard() {
   };
 
   return (
-    /* Veranderd van div naar Link voor navigatie */
     <Link 
       href={`/races/${race.id}`} 
       className="relative p-6 h-full min-h-[160px] flex flex-col justify-between overflow-hidden group/card"
     >
-      {/* Visualisatie: Status indicator linksboven */}
       <div className="flex justify-between items-start mb-2">
         <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-[#e10600]'} uppercase text-[10px] tracking-[0.2em]`}>
           Round {race.round} • Next Event
@@ -72,7 +70,6 @@ export default async function NextEventCard() {
         )}
       </div>
 
-      {/* Race Naam & Locatie */}
       <div className="relative z-10">
         <h2 className="font-f1 text-3xl md:text-4xl font-black italic uppercase leading-none tracking-tighter mb-1 group-hover/card:text-[#e10600] transition-colors">
           {race.race_name}
@@ -82,13 +79,13 @@ export default async function NextEventCard() {
             {race.city_name}
           </p>
           <span className="text-slate-700">•</span>
-          <p className="text-slate-500 text-xs font-medium uppercase">
+          {/* AANGEPAST: text-xs naar text-sm en slate-500 naar slate-400 voor betere zichtbaarheid */}
+          <p className="text-slate-400 text-sm font-bold uppercase italic">
             {formatDateRange(race.fp1_start, race.race_start)}
           </p>
         </div>
       </div>
 
-      {/* Voortgangs-streepjes */}
       <div className="flex gap-3 mt-6 relative z-10">
         <div className="flex flex-col gap-1">
           <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
@@ -106,7 +103,6 @@ export default async function NextEventCard() {
         </div>
       </div>
 
-      {/* Decoratief Element: Gebruikt nu race_name ipv country_code voor consistentie */}
       <div className="absolute -right-4 -bottom-8 font-f1 text-[100px] font-black italic text-white/[0.03] select-none pointer-events-none uppercase whitespace-nowrap">
         {race.race_name}
       </div>
