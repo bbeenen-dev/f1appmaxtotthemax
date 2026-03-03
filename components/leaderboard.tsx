@@ -21,10 +21,12 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function fetchLeaderboard() {
+      // We halen nu de top 10 op. Omdat we in SQL een LEFT JOIN gebruiken, 
+      // zitten hier nu ook mensen bij met 0 punten.
       const { data: board, error } = await supabase
         .from("leaderboard")
         .select("*")
-        .limit(10); // Toon de top 10 op de homepage
+        .limit(10);
 
       if (!error && board) {
         setData(board);
@@ -54,30 +56,45 @@ export default function Leaderboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {data.map((entry, index) => (
-                <tr key={index} className={`group transition-colors hover:bg-white/5 ${index === 0 ? 'bg-yellow-500/5' : ''}`}>
-                  <td className="py-4 px-6">
-                    <span className={`font-f1 italic font-black text-sm ${
-                      index === 0 ? "text-yellow-500" : 
-                      index === 1 ? "text-slate-300" : 
-                      index === 2 ? "text-orange-400" : "text-slate-600"
-                    }`}>
-                      {index + 1}
-                    </span>
-                  </td>
-                  <td className="py-4 px-2">
-                    <p className="font-f1 font-black italic uppercase text-xs tracking-tight">{entry.urer_name || entry.nickname}</p>
-                    <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{index === 0 ? "World Leader" : "Challenger"}</p>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <span className="font-f1 font-black italic text-sm text-white">
-                      {entry.grand_total}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {data.map((entry, index) => {
+                // Als grand_total onverhoopt toch null is, toon 0
+                const displayPoints = entry.grand_total ?? 0;
+                
+                return (
+                  <tr key={index} className={`group transition-colors hover:bg-white/5 ${index === 0 ? 'bg-yellow-500/5' : ''}`}>
+                    <td className="py-4 px-6">
+                      <span className={`font-f1 italic font-black text-sm ${
+                        index === 0 ? "text-yellow-500" : 
+                        index === 1 ? "text-slate-300" : 
+                        index === 2 ? "text-orange-400" : "text-slate-600"
+                      }`}>
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td className="py-4 px-2">
+                      <p className="font-f1 font-black italic uppercase text-xs tracking-tight">
+                        {entry.nickname || entry.urer_name || "Anonieme Coureur"}
+                      </p>
+                      <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">
+                        {displayPoints > 0 ? (index === 0 ? "World Leader" : "Challenger") : "Ready for Start"}
+                      </p>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <span className="font-f1 font-black italic text-sm text-white">
+                        {displayPoints}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          
+          {data.length === 0 && (
+            <div className="p-10 text-center text-slate-500 font-f1 italic uppercase text-[10px] tracking-widest">
+              Geen deelnemers gevonden
+            </div>
+          )}
         </div>
         
         <p className="text-center mt-6 text-[10px] text-slate-500 font-f1 uppercase tracking-[0.2em] italic">

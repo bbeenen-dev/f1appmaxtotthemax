@@ -12,6 +12,9 @@ export default async function HomePage() {
   await headers();
   const supabase = await createClient();
   
+  // FEATURE FLAGS (Zet op true om weer aan te zetten)
+  const showMyPredictions = false;
+
   // 1. Deadline logica
   const seasonDeadline = new Date('2026-03-06T17:00:00');
   const now = new Date();
@@ -98,21 +101,23 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* 4. MIJN VOORSPELLINGEN */}
-        <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
-          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#3b82f6_0deg,#3b82f6_40deg,transparent_90deg)] opacity-30 group-hover:opacity-100 transition-opacity" />
-          <Link href="/my-predictions" className="relative block bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 transition-colors group-hover:bg-[#1c222d]">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-black italic uppercase text-white group-hover:text-blue-400 transition-colors">Mijn Voorspellingen</h2>
-                <p className="text-slate-500 text-[9px] uppercase tracking-widest italic">Bekijk je keuzes & resultaten</p>
+        {/* 4. MIJN VOORSPELLINGEN (Tijdelijk conditioneel) */}
+        {showMyPredictions && (
+          <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
+            <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#3b82f6_0deg,#3b82f6_40deg,transparent_90deg)] opacity-30 group-hover:opacity-100 transition-opacity" />
+            <Link href="/my-predictions" className="relative block bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 transition-colors group-hover:bg-[#1c222d]">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-black italic uppercase text-white group-hover:text-blue-400 transition-colors">Mijn Voorspellingen</h2>
+                  <p className="text-slate-500 text-[9px] uppercase tracking-widest italic">Bekijk je keuzes & resultaten</p>
+                </div>
+                <div className="text-blue-500/50 text-xl font-black italic tracking-tighter">HISTORY</div>
               </div>
-              <div className="text-blue-500/50 text-xl font-black italic tracking-tighter">HISTORY</div>
-            </div>
-          </Link>
-        </section>
+            </Link>
+          </section>
+        )}
 
-        {/* 5. STANDEN (Leaderboard uit de View) */}
+        {/* 5. STANDEN */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6">
