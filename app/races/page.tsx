@@ -58,11 +58,9 @@ export default async function CalendarPage() {
   };
 
   return (
-    // Achtergrondkleur aangepast naar #0f111a en pb-32 toegevoegd voor de navbar
     <div className="min-h-screen bg-[#0f111a] text-white p-6 md:p-12 pb-32">
       <div className="max-w-5xl mx-auto">
         
-        {/* Header met nieuwe rode accentbalk */}
         <header className="mb-12 relative">
           <div className="w-16 md:w-24 h-1 bg-[#e10600] mb-4 shadow-[0_0_15px_rgba(225,6,0,0.5)]"></div>
           <h1 className="font-f1 text-4xl md:text-6xl font-black italic uppercase tracking-tighter">
@@ -94,14 +92,12 @@ export default async function CalendarPage() {
                   href={`/races/${race.id}`} 
                   className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.15)]"
                 >
-                  {/* De Gradient Border - Kleurt groen bij complete voorspelling */}
                   <div className={`absolute inset-0 transition-opacity duration-500 ${
                     isComplete 
                       ? 'bg-[conic-gradient(from_180deg_at_0%_50%,#22c55e_0deg,#22c55e_40deg,transparent_90deg)] opacity-100' 
                       : 'bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40 group-hover:opacity-100'
                   }`} />
 
-                  {/* Kaart Inhoud */}
                   <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d]">
                     <div className="flex justify-between items-start mb-4">
                       <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-[10px] tracking-widest leading-none`}>
@@ -120,20 +116,18 @@ export default async function CalendarPage() {
                       {race.race_name}
                     </h2>
                     
+                    {/* Aangepaste plaatsnaam en datum sectie */}
                     <div className="flex items-center gap-2 mb-8">
-                      <p className="text-slate-300 font-f1 font-black uppercase text-[9px] tracking-wider italic">
+                      <p className="text-white font-f1 font-black uppercase text-xs tracking-wider italic">
                         {race.city_name}
                       </p>
-                      <span className="text-slate-700 text-[10px]">•</span>
-                      <p className="text-slate-500 font-f1 text-[9px] font-medium uppercase tracking-widest">
+                      <span className="text-slate-600 text-[10px]">•</span>
+                      <p className="text-white font-f1 text-[11px] font-bold uppercase tracking-widest">
                         {formatDateRange(race.fp1_start, race.race_start)}
                       </p>
                     </div>
 
-                    {/* VERBETERDE INDICATORS: Chronologische volgorde (Sprint -> Qualy -> Race) */}
                     <div className="flex gap-3 mt-auto relative z-10">
-                      
-                      {/* 1. SPRINT (Conditioneel, als eerste getoond) */}
                       {needsSprint && (
                         <div className="flex flex-col gap-1">
                           <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Sprint</span>
@@ -141,13 +135,11 @@ export default async function CalendarPage() {
                         </div>
                       )}
 
-                      {/* 2. QUALY */}
                       <div className="flex flex-col gap-1">
                         <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
                         <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
                       </div>
 
-                      {/* 3. RACE */}
                       <div className="flex flex-col gap-1">
                         <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Race</span>
                         <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
@@ -155,7 +147,6 @@ export default async function CalendarPage() {
                     </div>
                   </div>
                   
-                  {/* Groot rondenummer op de achtergrond */}
                   <div className={`absolute -right-2 -bottom-4 font-f1 text-8xl font-black italic transition-colors select-none pointer-events-none opacity-[0.03] uppercase ${
                     isComplete ? 'text-green-500' : 'text-white'
                   }`}>
