@@ -180,7 +180,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* 5. STANDEN - AANGEPAST */}
+        {/* 5. STANDEN - VERBETERDE VERSIE */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6">
@@ -207,9 +207,9 @@ export default async function HomePage() {
                         {index + 1}
                       </span>
                       <div>
-                        <p className="text-[11px] font-black uppercase italic leading-none">{player.urer_name || player.nickname}</p>
-                        <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mt-1">
-                          {index === 0 ? "Championship Leader" : "Challenger"}
+                        {/* Vergroting naam naar text-sm en verwijdering onderschrift */}
+                        <p className="text-sm font-black uppercase italic leading-none">
+                          {player.urer_name || player.nickname}
                         </p>
                       </div>
                     </div>
