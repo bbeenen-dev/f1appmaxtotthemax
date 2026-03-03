@@ -21,8 +21,6 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function fetchLeaderboard() {
-      // We halen nu de top 10 op. Omdat we in SQL een LEFT JOIN gebruiken, 
-      // zitten hier nu ook mensen bij met 0 punten.
       const { data: board, error } = await supabase
         .from("leaderboard")
         .select("*")
@@ -57,7 +55,6 @@ export default function Leaderboard() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {data.map((entry, index) => {
-                // Als grand_total onverhoopt toch null is, toon 0
                 const displayPoints = entry.grand_total ?? 0;
                 
                 return (
@@ -72,7 +69,8 @@ export default function Leaderboard() {
                       </span>
                     </td>
                     <td className="py-4 px-2">
-                      <p className="font-f1 font-black italic uppercase text-xs tracking-tight">
+                      {/* AANGEPAST: lettertype naar text-sm en tracking-normal voor betere leesbaarheid */}
+                      <p className="font-f1 font-black italic uppercase text-sm tracking-normal">
                         {entry.nickname || entry.urer_name || "Anonieme Coureur"}
                       </p>
                       <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">
