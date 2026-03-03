@@ -12,15 +12,33 @@ export default async function HomePage() {
   await headers();
   const supabase = await createClient();
   
-  // FEATURE FLAGS (Zet op true om weer aan te zetten)
+  // FEATURE FLAGS
   const showMyPredictions = false;
 
-  // 1. Deadline logica
+  // 1. PRIJZENPOT LOGICA (Bitcoin)
+  const cashPrizeEuro = 120;
+  let btcValue = "0.00000000";
+
+  try {
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur',
+      { next: { revalidate: 300 } } // Cache voor 5 minuten
+    );
+    const data = await response.json();
+    if (data.bitcoin && data.bitcoin.eur) {
+      btcValue = (cashPrizeEuro / data.bitcoin.eur).toFixed(8);
+    }
+  } catch (error) {
+    console.error("BTC API Error:", error);
+    btcValue = "Check Koers...";
+  }
+
+  // 2. Deadline logica
   const seasonDeadline = new Date('2026-03-06T17:00:00');
   const now = new Date();
   const isBeforeSeasonStart = now < seasonDeadline;
 
-  // 2. Check user & Jaarvoorspelling
+  // 3. Check user & Jaarvoorspelling
   const { data: { user } } = await supabase.auth.getUser();
   let hasPredictedSeason = false;
   
@@ -34,7 +52,7 @@ export default async function HomePage() {
     if (data) hasPredictedSeason = true;
   }
 
-  // 3. Haal Leaderboard data op (Top 10)
+  // 4. Haal Leaderboard data op (Top 10)
   const { data: leaderboard } = await supabase
     .from('leaderboard')
     .select('*')
@@ -56,6 +74,35 @@ export default async function HomePage() {
 
       <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-8 -mt-6 relative z-10">
         
+        {/* 0. PRIJZENPOT (BOVENAAN) */}
+        <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-2xl">
+          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_50%,#f7931a_0deg,#f7931a_40deg,transparent_90deg)] opacity-40" />
+          <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 border border-white/5 transition-all group-hover:bg-[#1c222d]">
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-1 h-4 bg-[#f7931a]"></div>
+                  <h2 className="text-[10px] font-black italic uppercase text-slate-400 tracking-[0.2em]">Prijzenpot 2026</h2>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-4xl font-black italic text-white tracking-tighter">€{cashPrizeEuro}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[#f7931a] font-f1 italic font-black text-[10px] uppercase leading-none">
+                      ≈ {btcValue} BTC
+                    </span>
+                    <span className="text-[8px] text-slate-600 uppercase font-bold mt-1">Live Crypto Rate</span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-[#f7931a]/10 p-3 rounded-2xl border border-[#f7931a]/20 shadow-[0_0_15px_rgba(247,147,26,0.1)]">
+                <svg className="w-8 h-8 text-[#f7931a]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.638 14.904c-1.602 6.43-8.113 10.34-14.542 8.736C2.67 22.05-1.244 15.556.362 9.103 1.962 2.67 8.473-1.24 14.904.364c6.415 1.61 10.342 8.097 8.734 14.54zm-6.115-3.082c.284-1.897-1.162-2.915-3.136-3.595l.642-2.572-1.565-.39-.625 2.508c-.412-.102-.832-.198-1.248-.292l.63-2.524-1.565-.392-.642 2.572c-.342-.078-.674-.155-1.012-.238l.002-.01-2.158-.54-.417 1.672s1.16.265 1.135.282c.633.158.748.577.728.91l-.73 2.926c.044.01.102.027.166.052l-.168-.042-1.022 4.1c-.078.193-.275.483-.718.374.017.024-1.136-.283-1.136-.283l-.78 1.79 2.037.51c.38.095.753.193 1.12.285l-.647 2.603 1.563.39.643-2.58c.428.117.844.227 1.25.33l-.64 2.565 1.565.39.646-2.595c2.67.505 4.678.303 5.523-2.112.68-1.944-.033-3.065-1.442-3.803.948-.22 1.662-.843 1.855-2.137zm-3.32 4.65c-.484 1.944-3.755.894-4.814.63l.858-3.44c1.06.264 4.453.784 3.956 2.81zm.485-4.685c-.44 1.766-3.16.87-4.04.65l.78-3.128c.88.22 3.71.63 3.26 2.478z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* 1. NEXT EVENT */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-2xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
@@ -101,7 +148,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* 4. MIJN VOORSPELLINGEN (Tijdelijk conditioneel) */}
+        {/* 4. MIJN VOORSPELLINGEN */}
         {showMyPredictions && (
           <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
             <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#3b82f6_0deg,#3b82f6_40deg,transparent_90deg)] opacity-30 group-hover:opacity-100 transition-opacity" />
