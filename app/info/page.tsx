@@ -33,7 +33,7 @@ export default async function InfoPage() {
             Welkom, <span className="text-[#e10600]">{nickname}!</span>
           </h1>
           <p className="mt-8 text-slate-300 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-slate-800 pl-8">
-            Eindelijk onze eigen Formule 1 poule app. Ontworpen voor snelheid en precisie, precies zoals de sport zelf.
+            Eindelijk onze eigen Formule 1 poule app. Gemaakt onder dwang en onder protest om dat de andere apps zuigen!
           </p>
         </header>
 

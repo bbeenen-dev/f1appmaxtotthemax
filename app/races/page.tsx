@@ -1,3 +1,4 @@
+// Calenderpage
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { headers } from 'next/headers';
@@ -116,13 +117,13 @@ export default async function CalendarPage() {
                       {race.race_name}
                     </h2>
                     
-                    {/* Aangepaste plaatsnaam en datum sectie */}
+                    {/* Aangepaste plaatsnaam en datum sectie: Groter en grijs */}
                     <div className="flex items-center gap-2 mb-8">
-                      <p className="text-white font-f1 font-black uppercase text-xs tracking-wider italic">
+                      <p className="text-slate-400 font-f1 font-black uppercase text-sm tracking-wider italic">
                         {race.city_name}
                       </p>
-                      <span className="text-slate-600 text-[10px]">•</span>
-                      <p className="text-white font-f1 text-[11px] font-bold uppercase tracking-widest">
+                      <span className="text-slate-700 text-xs">•</span>
+                      <p className="text-slate-400 font-f1 text-sm font-bold uppercase tracking-widest italic">
                         {formatDateRange(race.fp1_start, race.race_start)}
                       </p>
                     </div>
