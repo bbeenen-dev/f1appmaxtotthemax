@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
-// Dwing Next.js om geen statische cache te gebruiken voor dit leaderboard
+// Dwing Next.js (server-side) om geen statische cache te gebruiken
 export const dynamic = "force-dynamic";
 
 interface LeaderboardEntry {
@@ -24,17 +24,24 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function fetchLeaderboard() {
-      // We halen alle gebruikers op en sorteren direct op de hoogste score
+      // De 'abortSignal' of handmatige headers helpen om browser-caching te voorkomen
       const { data: board, error } = await supabase
         .from("leaderboard")
         .select("*")
-        .order("grand_total", { ascending: false });
+        .order("grand_total", { ascending: false })
+        // Forceert de browser om de data niet uit de eigen cache te halen
+        .setHeader('Cache-Control', 'no-cache'); 
 
       if (!error && board) {
+        // Handige log voor debugging: check je console (F12)
+        console.log(`Leaderboard ingeladen: ${board.length} deelnemers.`);
         setData(board);
+      } else if (error) {
+        console.error("Fout bij ophalen leaderboard:", error);
       }
       setLoading(false);
     }
+    
     fetchLeaderboard();
   }, [supabase]);
 
