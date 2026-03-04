@@ -64,7 +64,6 @@ export default function RaceCardPage({ params }: PageProps) {
         const user = session?.user;
 
         if (user && isMounted) {
-          // Check status in de 3 verschillende tabellen
           const [qualyCheck, sprintCheck, raceCheck] = await Promise.all([
             supabase.from('predictions_qualifying').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
             supabase.from('predictions_sprint').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
@@ -132,6 +131,16 @@ export default function RaceCardPage({ params }: PageProps) {
         )}
 
         <div className="grid gap-6">
+          {/* NIEUW: LIVE TRACKER / LEADERBOARD */}
+          <LiveCard 
+            title="Live Tracker" 
+            subtitle="Virtual Standing • Real-time Updates"
+            href={`/race/${raceId}/live`}
+            accentColor="#005AFF" 
+          />
+
+          <div className="h-[1px] w-full bg-slate-800/50 my-2" />
+
           {/* SPRINT (Alleen indien in database) */}
           {race?.sprint_race_start && (
             <PredictionCard 
@@ -163,6 +172,49 @@ export default function RaceCardPage({ params }: PageProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Speciale component voor de Live Tracker link
+function LiveCard({ title, subtitle, href, accentColor }: { 
+  title: string, subtitle: string, href: string, accentColor: string 
+}) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
+        
+        {/* Blue Conic Border Effect */}
+        <div 
+          className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500"
+          style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }}
+        />
+        
+        <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">
+                {title}
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-[#005AFF] animate-pulse"></span>
+                <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <span className="text-[#005AFF] text-2xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                →
+              </span>
+            </div>
+          </div>
+          {/* Blauwe accent-lijn onderaan */}
+          <div 
+            className="absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100"
+            style={{ backgroundColor: accentColor }}
+          />
+        </div>
+      </div>
+    </Link>
   );
 }
 
