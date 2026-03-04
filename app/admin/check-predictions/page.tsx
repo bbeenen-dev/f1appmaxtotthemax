@@ -6,12 +6,13 @@ import { createBrowserClient } from "@supabase/ssr";
 
 interface Profile {
   id: string;
-  nickname: string; // Aangepast naar nickname
+  nickname: string;
 }
 
 interface Race {
   id: number;
   race_name: string;
+  has_sprint: boolean; // Toegevoegd om sprint status te weten
 }
 
 interface PredictionStatus {
@@ -27,6 +28,7 @@ export default function CheckPredictionsPage() {
   const [races, setRaces] = useState<Race[]>([]);
   const [selectedRaceId, setSelectedRaceId] = useState<string>("");
   const [statusList, setStatusList] = useState<PredictionStatus[]>([]);
+  const [isSprintWeekend, setIsSprintWeekend] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   const supabase = createBrowserClient(
@@ -34,13 +36,16 @@ export default function CheckPredictionsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 1. Haal alle races op
+  // 1. Haal alle races op inclusief has_sprint
   useEffect(() => {
     async function init() {
-      const { data: raceData } = await supabase.from("races").select("id, race_name").order("id");
+      const { data: raceData } = await supabase
+        .from("races")
+        .select("id, race_name, has_sprint")
+        .order("id");
+      
       if (raceData && raceData.length > 0) {
         setRaces(raceData);
-        // Pak de eerste race als standaard
         setSelectedRaceId(raceData[0].id.toString());
       }
     }
@@ -54,17 +59,19 @@ export default function CheckPredictionsPage() {
     async function checkStatus() {
       setLoading(true);
       
-      // Haal alle deelnemers op uit de profiles tabel met de kolom nickname
+      // Update of dit een sprintweekend is
+      const currentRace = races.find(r => r.id.toString() === selectedRaceId);
+      setIsSprintWeekend(currentRace?.has_sprint || false);
+
+      // Haal alle deelnemers op
       const { data: users, error: userError } = await supabase
         .from("profiles")
         .select("id, nickname")
         .order("nickname", { ascending: true });
 
-      if (userError) {
-        console.error("Fout bij ophalen profiles:", userError);
-      }
+      if (userError) console.error("Fout bij ophalen profiles:", userError);
       
-      // Haal alle bestaande voorspellingen op voor deze race
+      // Haal alle bestaande voorspellingen op
       const [qualy, sprint, race] = await Promise.all([
         supabase.from("predictions_qualifying").select("user_id").eq("race_id", selectedRaceId),
         supabase.from("predictions_sprint").select("user_id").eq("race_id", selectedRaceId),
@@ -85,7 +92,7 @@ export default function CheckPredictionsPage() {
     }
 
     checkStatus();
-  }, [selectedRaceId, supabase]);
+  }, [selectedRaceId, races, supabase]);
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 font-f1">
@@ -102,17 +109,20 @@ export default function CheckPredictionsPage() {
         </div>
 
         {/* Race Selector */}
-        <div className="bg-[#161a23] p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+        <div className="bg-[#161a23] p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner relative">
           <label className="text-[9px] font-black uppercase text-slate-500 italic mb-2 block ml-1">Selecteer Grand Prix</label>
           <select 
             value={selectedRaceId} 
             onChange={(e) => setSelectedRaceId(e.target.value)}
-            className="w-full bg-transparent text-white font-bold uppercase italic focus:outline-none cursor-pointer appearance-none"
+            className="w-full bg-transparent text-white font-bold uppercase italic focus:outline-none cursor-pointer appearance-none pr-10"
           >
             {races.map(r => (
-              <option key={r.id} value={r.id} className="bg-[#161a23]">{r.race_name}</option>
+              <option key={r.id} value={r.id} className="bg-[#161a23]">
+                {r.race_name} {r.has_sprint ? "(SPRINT)" : ""}
+              </option>
             ))}
           </select>
+          <div className="absolute right-8 top-12 pointer-events-none text-slate-500 text-xs">▼</div>
         </div>
 
         {/* Status Tabel */}
@@ -122,22 +132,18 @@ export default function CheckPredictionsPage() {
               <tr className="bg-white/5 border-b border-slate-800">
                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic">Deelnemer</th>
                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic text-center">Qualy</th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic text-center">Sprint</th>
+                {isSprintWeekend && (
+                  <th className="p-4 text-[10px] font-black uppercase text-[#005AFF] italic text-center">Sprint</th>
+                )}
                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic text-center">Race</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="p-12 text-center">
+                  <td colSpan={isSprintWeekend ? 4 : 3} className="p-12 text-center">
                     <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-[#005AFF] mr-3"></div>
                     <span className="text-xs font-black italic uppercase text-slate-500">Gegevens laden...</span>
-                  </td>
-                </tr>
-              ) : statusList.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-12 text-center text-xs text-slate-500 uppercase italic">
-                    Geen deelnemers gevonden in de database.
                   </td>
                 </tr>
               ) : (
@@ -145,10 +151,12 @@ export default function CheckPredictionsPage() {
                   <tr key={user.user_id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors group">
                     <td className="p-4">
                       <p className="font-black uppercase italic text-sm text-white group-hover:text-[#005AFF] transition-colors">{user.user_name}</p>
-                      <p className="text-[7px] text-slate-600 font-mono uppercase tracking-tighter">{user.user_id}</p>
+                      <p className="text-[7px] text-slate-600 font-mono uppercase tracking-tighter italic">ID: {user.user_id.slice(0,8)}...</p>
                     </td>
                     <td className="p-4 text-center">{StatusIcon(user.hasQualy)}</td>
-                    <td className="p-4 text-center">{StatusIcon(user.hasSprint)}</td>
+                    {isSprintWeekend && (
+                      <td className="p-4 text-center">{StatusIcon(user.hasSprint)}</td>
+                    )}
                     <td className="p-4 text-center">{StatusIcon(user.hasRace)}</td>
                   </tr>
                 ))
