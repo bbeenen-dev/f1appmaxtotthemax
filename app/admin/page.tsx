@@ -4,16 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 
-interface Race {
-  id: number;
-  race_name: string;
-  race_date: string;
-  location: string;
-}
-
 export default function AdminDashboard() {
-  const [races, setRaces] = useState<Race[]>([]);
-  const [nextRace, setNextRace] = useState<Race | null>(null);
+  const [nextRace, setNextRace] = useState<{id: number, race_name: string} | null>(null);
   const [loading, setLoading] = useState(true);
 
   const supabase = createBrowserClient(
@@ -22,22 +14,20 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    async function fetchData() {
-      const { data: raceData } = await supabase
+    async function fetchNextRace() {
+      const { data } = await supabase
         .from("races")
-        .select("id, race_name, race_date, location")
-        .order("id", { ascending: true });
+        .select("id, race_name, race_date")
+        .order("race_date", { ascending: true });
 
-      if (raceData) {
-        setRaces(raceData);
-        // Bepaal de eerstvolgende race op basis van datum
+      if (data) {
         const now = new Date();
-        const future = raceData.find(r => new Date(r.race_date) > now) || raceData[0];
+        const future = data.find(r => new Date(r.race_date) > now) || data[0];
         setNextRace(future);
       }
       setLoading(false);
     }
-    fetchData();
+    fetchNextRace();
   }, [supabase]);
 
   if (loading) return (
@@ -51,8 +41,8 @@ export default function AdminDashboard() {
       <div className="max-w-4xl mx-auto">
         
         {/* Header */}
-        <header className="mb-12 border-b border-slate-800 pb-8">
-          <div className="flex items-center gap-3 mb-2">
+        <header className="mb-12 border-b border-slate-800 pb-8 text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
             <div className="w-2 h-8 bg-[#005aff] shadow-[0_0_15px_rgba(0,90,255,0.8)]"></div>
             <h1 className="text-3xl font-black italic uppercase text-white tracking-tighter">
               Race <span className="text-[#005aff]">Control</span>
@@ -63,34 +53,55 @@ export default function AdminDashboard() {
           </p>
         </header>
 
-        {/* HOOFDMENU SECTIES */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        {/* HOOFDMENU GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* 1. CONTROLE LIJST (Quick Link naar eerstvolgende event) */}
-          <div className="bg-[#161a23] border border-slate-800 rounded-3xl p-6 hover:border-[#005aff] transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <svg className="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          {/* 1. CONTROLE LIJST */}
+          <div className="bg-[#161a23] border border-slate-800 rounded-3xl p-6 hover:border-[#005aff] transition-all group flex flex-col justify-between">
+            <div>
+              <div className="text-[#005aff] text-xs font-black mb-2 opacity-50 italic">STAP 01</div>
+              <h2 className="text-xl font-black italic uppercase mb-2">Controlelijst</h2>
+              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">
+                Check wie de voorspellingen al heeft ingevuld voor de volgende race.
+              </p>
             </div>
-            <h2 className="text-xl font-black italic uppercase mb-2">1. Controlelijst</h2>
-            <p className="text-slate-500 text-xs mb-6 h-12">Check wie hun voorspellingen al hebben ingediend voor {nextRace?.race_name}.</p>
             <Link 
-              href={`/admin/check-predictions/${nextRace?.id}`}
-              className="inline-block w-full text-center bg-white text-black text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-[#005aff] hover:text-white transition-all"
+              href={`/admin/check-predictions`}
+              className="block w-full text-center bg-white/5 border border-white/10 text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-white hover:text-black transition-all"
             >
-              Open Checklijst
+              Check Deelnemers
             </Link>
           </div>
 
-          {/* 2. OVERIGE TAKEN */}
-          <div className="bg-[#161a23] border border-slate-800 rounded-3xl p-6 hover:border-[#005aff] transition-all group relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <svg className="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+          {/* 2. UITSLAGEN & PUNTEN (De pagina die we net maakten) */}
+          <div className="bg-[#161a23] border border-[#005aff]/30 rounded-3xl p-6 hover:border-[#005aff] transition-all group shadow-[0_0_30px_rgba(0,90,255,0.05)] flex flex-col justify-between">
+            <div>
+              <div className="text-[#005aff] text-xs font-black mb-2 italic">STAP 02</div>
+              <h2 className="text-xl font-black italic uppercase mb-2">Uitslagen</h2>
+              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">
+                Voer de uitslag in van Qualy, Sprint of Race en bereken direct alle scores.
+              </p>
             </div>
-            <h2 className="text-xl font-black italic uppercase mb-2">3. Admin Overzichten</h2>
-            <p className="text-slate-500 text-xs mb-6 h-12">Beheer gebruikers, pas handmatige offsets aan of bekijk systeem logs.</p>
+            <Link 
+              href={`/admin/results/${nextRace?.id || 1}`}
+              className="block w-full text-center bg-[#005aff] text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-white hover:text-[#005aff] transition-all shadow-[0_10px_20px_rgba(0,90,255,0.2)]"
+            >
+              Uitslag Invoeren
+            </Link>
+          </div>
+
+          {/* 3. ADMIN OVERZICHTEN */}
+          <div className="bg-[#161a23] border border-slate-800 rounded-3xl p-6 hover:border-red-500/50 transition-all group flex flex-col justify-between">
+            <div>
+              <div className="text-slate-600 text-xs font-black mb-2 italic">STAP 03</div>
+              <h2 className="text-xl font-black italic uppercase mb-2">Beheer</h2>
+              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">
+                Toevoegen van spelers, handmatige correcties of systeeminstellingen.
+              </p>
+            </div>
             <Link 
               href="/admin/settings"
-              className="inline-block w-full text-center border border-white/20 text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-white/10 transition-all"
+              className="block w-full text-center bg-white/5 border border-white/10 text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
             >
               Systeem Beheer
             </Link>
@@ -98,56 +109,15 @@ export default function AdminDashboard() {
 
         </div>
 
-        {/* 2. UITSLAGEN INVOEREN (Race lijst) */}
-        <div className="mb-6 flex items-center gap-2">
-          <div className="w-1 h-4 bg-[#005aff]"></div>
-          <h2 className="text-xl font-black italic uppercase tracking-tighter">2. Uitslagen & Punten</h2>
-        </div>
-        
-        <div className="grid gap-3">
-          {races.map((race) => (
-            <div 
-              key={race.id} 
-              className="bg-[#161a23] border border-slate-800 p-4 rounded-2xl flex items-center justify-between group hover:bg-[#1c222d] transition-all"
-            >
-              <div className="flex flex-col">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">
-                  Ronde {race.id} • {race.location}
-                </span>
-                <h3 className="text-md font-black italic uppercase leading-tight text-white/90">
-                  {race.race_name}
-                </h3>
-              </div>
-              
-              <div className="flex gap-2">
-                <Link 
-                  href={`/admin/results/${race.id}`}
-                  className="bg-[#005aff]/10 text-[#005aff] text-[9px] font-black italic uppercase px-4 py-2 rounded-lg border border-[#005aff]/20 hover:bg-[#005aff] hover:text-white transition-all"
-                >
-                  Invoeren
-                </Link>
-                <Link 
-                  href={`/admin/calculate/${race.id}`}
-                  className="bg-green-500/10 text-green-500 text-[9px] font-black italic uppercase px-4 py-2 rounded-lg border border-green-500/20 hover:bg-green-500 hover:text-white transition-all"
-                >
-                  Berekenen
-                </Link>
-              </div>
-            </div>
-          ))}
+        {/* Info balk */}
+        <div className="mt-12 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+             <span className="text-[10px] font-black italic uppercase text-slate-400">Status: Verbonden met Database</span>
+          </div>
+          <span className="text-[10px] font-black italic uppercase text-blue-500">Seizoen 2026</span>
         </div>
 
-        {/* Systeem Status */}
-        <footer className="mt-16 p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
-          <div className="flex items-center justify-center gap-4 text-slate-600 text-[9px] uppercase tracking-widest font-bold">
-            <span>Admin Mode</span>
-            <span className="w-1 h-1 bg-slate-800 rounded-full"></span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-              API Online
-            </span>
-          </div>
-        </footer>
       </div>
     </div>
   );
