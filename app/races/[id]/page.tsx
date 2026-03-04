@@ -131,16 +131,6 @@ export default function RaceCardPage({ params }: PageProps) {
         )}
 
         <div className="grid gap-6">
-          {/* NIEUW: LIVE TRACKER / LEADERBOARD */}
-          <LiveCard 
-            title="Live Tracker" 
-            subtitle="Virtual Standing • Real-time Updates"
-            href={`/race/${raceId}/live`}
-            accentColor="#005AFF" 
-          />
-
-          <div className="h-[1px] w-full bg-slate-800/50 my-2" />
-
           {/* SPRINT (Alleen indien in database) */}
           {race?.sprint_race_start && (
             <PredictionCard 
@@ -169,6 +159,16 @@ export default function RaceCardPage({ params }: PageProps) {
             isDone={status.race}
             accentColor="bg-[#e10600]"
           />
+
+          <div className="h-[1px] w-full bg-slate-800/50 my-2" />
+
+          {/* LIVE TRACKER NU ONDERAAN MET GECORRIGEERDE LINK */}
+          <LiveCard 
+            title="Live Tracker" 
+            subtitle="Virtual Standing • Real-time Updates"
+            href={`/races/${raceId}/live`} 
+            accentColor="#005AFF" 
+          />
         </div>
       </div>
     </div>
@@ -183,7 +183,6 @@ function LiveCard({ title, subtitle, href, accentColor }: {
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
         
-        {/* Blue Conic Border Effect */}
         <div 
           className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500"
           style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }}
@@ -207,7 +206,6 @@ function LiveCard({ title, subtitle, href, accentColor }: {
               </span>
             </div>
           </div>
-          {/* Blauwe accent-lijn onderaan */}
           <div 
             className="absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100"
             style={{ backgroundColor: accentColor }}
@@ -224,11 +222,7 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
   return (
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
-        
-        {/* F1 Conic Border Effect */}
         <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
-        
-        {/* Kaart Inhoud */}
         <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
           <div className="flex justify-between items-center">
             <div>
@@ -255,8 +249,6 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: {
               )}
             </div>
           </div>
-
-          {/* Dynamische Accent-lijn onderaan */}
           <div className={`absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
         </div>
       </div>
