@@ -38,7 +38,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 font-f1 pb-32">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         
         {/* Header */}
         <header className="mb-12 border-b border-slate-800 pb-8 text-center md:text-left">
@@ -54,58 +54,53 @@ export default function AdminDashboard() {
         </header>
 
         {/* HOOFDMENU GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           
           {/* 1. CONTROLE LIJST */}
-          <div className="bg-[#161a23] border border-slate-800 rounded-3xl p-6 hover:border-[#005aff] transition-all group flex flex-col justify-between">
+          <MenuCard 
+            step="01" 
+            title="Check" 
+            desc="Wie heeft er al voorspeld?" 
+            href="/admin/check-predictions" 
+            label="Check Deelnemers"
+          />
+
+          {/* 2. UITSLAGEN */}
+          <MenuCard 
+            step="02" 
+            title="Uitslagen" 
+            desc="Punten berekenen voor de race." 
+            href={`/admin/results/${nextRace?.id || 1}`} 
+            label="Invoeren"
+            highlight
+          />
+
+          {/* 3. EXPORT (NIEUW) */}
+          <div className="bg-[#161a23] border border-green-500/30 rounded-3xl p-6 hover:border-green-500 transition-all group flex flex-col justify-between">
             <div>
-              <div className="text-[#005aff] text-xs font-black mb-2 opacity-50 italic">STAP 01</div>
-              <h2 className="text-xl font-black italic uppercase mb-2">Controlelijst</h2>
-              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">
-                Check wie de voorspellingen al heeft ingevuld voor de volgende race.
+              <div className="text-green-500 text-xs font-black mb-2 italic tracking-widest">STAP 03</div>
+              <h2 className="text-xl font-black italic uppercase mb-2">Offline Back-up</h2>
+              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6 text-balance">
+                Exporteer alle voorspellingen naar een printbaar overzicht voor op je telefoon.
               </p>
             </div>
             <Link 
-              href={`/admin/check-predictions`}
-              className="block w-full text-center bg-white/5 border border-white/10 text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-white hover:text-black transition-all"
+              href={`/admin/export/${nextRace?.id || 1}`}
+              className="block w-full text-center bg-green-600 text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-white hover:text-green-600 transition-all shadow-[0_10px_20px_rgba(34,197,94,0.1)]"
             >
-              Check Deelnemers
+              Exporteer naar PDF
             </Link>
           </div>
 
-          {/* 2. UITSLAGEN & PUNTEN (De pagina die we net maakten) */}
-          <div className="bg-[#161a23] border border-[#005aff]/30 rounded-3xl p-6 hover:border-[#005aff] transition-all group shadow-[0_0_30px_rgba(0,90,255,0.05)] flex flex-col justify-between">
-            <div>
-              <div className="text-[#005aff] text-xs font-black mb-2 italic">STAP 02</div>
-              <h2 className="text-xl font-black italic uppercase mb-2">Uitslagen</h2>
-              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">
-                Voer de uitslag in van Qualy, Sprint of Race en bereken direct alle scores.
-              </p>
-            </div>
-            <Link 
-              href={`/admin/results/${nextRace?.id || 1}`}
-              className="block w-full text-center bg-[#005aff] text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-white hover:text-[#005aff] transition-all shadow-[0_10px_20px_rgba(0,90,255,0.2)]"
-            >
-              Uitslag Invoeren
-            </Link>
-          </div>
-
-          {/* 3. ADMIN OVERZICHTEN */}
-          <div className="bg-[#161a23] border border-slate-800 rounded-3xl p-6 hover:border-red-500/50 transition-all group flex flex-col justify-between">
-            <div>
-              <div className="text-slate-600 text-xs font-black mb-2 italic">STAP 03</div>
-              <h2 className="text-xl font-black italic uppercase mb-2">Beheer</h2>
-              <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">
-                Toevoegen van spelers, handmatige correcties of systeeminstellingen.
-              </p>
-            </div>
-            <Link 
-              href="/admin/settings"
-              className="block w-full text-center bg-white/5 border border-white/10 text-white text-[10px] font-black italic uppercase py-3 rounded-xl hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
-            >
-              Systeem Beheer
-            </Link>
-          </div>
+          {/* 4. BEHEER */}
+          <MenuCard 
+            step="04" 
+            title="Beheer" 
+            desc="Systeeminstellingen & spelers." 
+            href="/admin/settings" 
+            label="Systeem Beheer"
+            isDark
+          />
 
         </div>
 
@@ -113,12 +108,34 @@ export default function AdminDashboard() {
         <div className="mt-12 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-             <span className="text-[10px] font-black italic uppercase text-slate-400">Status: Verbonden met Database</span>
+             <span className="text-[10px] font-black italic uppercase text-slate-400">Verbonden: {nextRace?.race_name}</span>
           </div>
           <span className="text-[10px] font-black italic uppercase text-blue-500">Seizoen 2026</span>
         </div>
-
       </div>
+    </div>
+  );
+}
+
+// Hulpcart voor overzichtelijk dashboard
+function MenuCard({ step, title, desc, href, label, highlight = false, isDark = false }: any) {
+  return (
+    <div className={`bg-[#161a23] border ${highlight ? 'border-[#005aff]/30 shadow-[0_0_30px_rgba(0,90,255,0.05)]' : 'border-slate-800'} rounded-3xl p-6 hover:border-[#005aff] transition-all flex flex-col justify-between`}>
+      <div>
+        <div className={`${highlight ? 'text-[#005aff]' : 'text-slate-600'} text-xs font-black mb-2 italic`}>STAP {step}</div>
+        <h2 className="text-xl font-black italic uppercase mb-2">{title}</h2>
+        <p className="text-slate-500 text-[10px] uppercase leading-relaxed mb-6">{desc}</p>
+      </div>
+      <Link 
+        href={href}
+        className={`block w-full text-center py-3 rounded-xl text-[10px] font-black italic uppercase transition-all ${
+          highlight 
+          ? 'bg-[#005aff] text-white hover:bg-white hover:text-[#005aff]' 
+          : 'bg-white/5 border border-white/10 text-white hover:bg-white hover:text-black'
+        }`}
+      >
+        {label}
+      </Link>
     </div>
   );
 }
