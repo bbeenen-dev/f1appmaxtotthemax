@@ -1,4 +1,3 @@
-// Calenderpage
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { headers } from 'next/headers';
@@ -91,16 +90,33 @@ export default async function CalendarPage() {
                 <Link 
                   key={race.id} 
                   href={`/races/${race.id}`} 
-                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.15)]"
+                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.15)] h-64"
                 >
+                  {/* Conic Gradient Border */}
                   <div className={`absolute inset-0 transition-opacity duration-500 ${
                     isComplete 
                       ? 'bg-[conic-gradient(from_180deg_at_0%_50%,#22c55e_0deg,#22c55e_40deg,transparent_90deg)] opacity-100' 
                       : 'bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40 group-hover:opacity-100'
                   }`} />
 
-                  <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d]">
-                    <div className="flex justify-between items-start mb-4">
+                  {/* Main Content Card */}
+                  <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d] overflow-hidden">
+                    
+                    {/* Circuit Map Background Layer */}
+                    <div className="absolute right-[-10px] bottom-[-10px] w-40 h-36 overflow-hidden pointer-events-none z-0">
+                      <img 
+                        src={`/circuits/${race.round}.PNG`}
+                        alt=""
+                        className="w-full h-full object-contain object-right-bottom 
+                                   invert brightness-200 mix-blend-screen 
+                                   scale-125 opacity-[0.05] transition-all duration-700 
+                                   group-hover:opacity-20 group-hover:scale-135 filter blur-[0.2px]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+
+                    {/* Header: Round & Status Icon */}
+                    <div className="flex justify-between items-start mb-4 relative z-10">
                       <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-[10px] tracking-widest leading-none`}>
                         Round {race.round}
                       </span>
@@ -113,12 +129,12 @@ export default async function CalendarPage() {
                       )}
                     </div>
                     
-                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight text-white group-hover:text-[#e10600] transition-colors">
+                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight text-white group-hover:text-[#e10600] transition-colors relative z-10">
                       {race.race_name}
                     </h2>
                     
-                    {/* Aangepaste plaatsnaam en datum sectie: Groter en grijs */}
-                    <div className="flex items-center gap-2 mb-8">
+                    {/* City & Date */}
+                    <div className="flex items-center gap-2 mb-8 relative z-10">
                       <p className="text-slate-400 font-f1 font-black uppercase text-sm tracking-wider italic">
                         {race.city_name}
                       </p>
@@ -128,6 +144,7 @@ export default async function CalendarPage() {
                       </p>
                     </div>
 
+                    {/* Prediction Progress Bars */}
                     <div className="flex gap-3 mt-auto relative z-10">
                       {needsSprint && (
                         <div className="flex flex-col gap-1">
@@ -148,7 +165,8 @@ export default async function CalendarPage() {
                     </div>
                   </div>
                   
-                  <div className={`absolute -right-2 -bottom-4 font-f1 text-8xl font-black italic transition-colors select-none pointer-events-none opacity-[0.03] uppercase ${
+                  {/* Big Number Background */}
+                  <div className={`absolute -left-2 -bottom-2 font-f1 text-8xl font-black italic transition-colors select-none pointer-events-none opacity-[0.02] uppercase z-0 ${
                     isComplete ? 'text-green-500' : 'text-white'
                   }`}>
                     {race.round}
