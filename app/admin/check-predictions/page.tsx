@@ -6,7 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 
 interface Profile {
   id: string;
-  full_name: string;
+  nickname: string; // Aangepast naar nickname
 }
 
 interface Race {
@@ -34,13 +34,13 @@ export default function CheckPredictionsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 1. Haal alle races en alle profielen op
+  // 1. Haal alle races op
   useEffect(() => {
     async function init() {
       const { data: raceData } = await supabase.from("races").select("id, race_name").order("id");
-      if (raceData) {
+      if (raceData && raceData.length > 0) {
         setRaces(raceData);
-        // Pak de eerste of de 'volgende' race als standaard
+        // Pak de eerste race als standaard
         setSelectedRaceId(raceData[0].id.toString());
       }
     }
@@ -54,8 +54,15 @@ export default function CheckPredictionsPage() {
     async function checkStatus() {
       setLoading(true);
       
-      // Haal alle deelnemers op (uit je profiles of users tabel)
-      const { data: users } = await supabase.from("profiles").select("id, full_name").order("full_name");
+      // Haal alle deelnemers op uit de profiles tabel met de kolom nickname
+      const { data: users, error: userError } = await supabase
+        .from("profiles")
+        .select("id, nickname")
+        .order("nickname", { ascending: true });
+
+      if (userError) {
+        console.error("Fout bij ophalen profiles:", userError);
+      }
       
       // Haal alle bestaande voorspellingen op voor deze race
       const [qualy, sprint, race] = await Promise.all([
@@ -67,7 +74,7 @@ export default function CheckPredictionsPage() {
       if (users) {
         const results = users.map(u => ({
           user_id: u.id,
-          user_name: u.full_name || "Onbekende coureur",
+          user_name: u.nickname || "Anonieme coureur",
           hasQualy: qualy.data?.some(p => p.user_id === u.id) || false,
           hasSprint: sprint.data?.some(p => p.user_id === u.id) || false,
           hasRace: race.data?.some(p => p.user_id === u.id) || false,
@@ -95,12 +102,12 @@ export default function CheckPredictionsPage() {
         </div>
 
         {/* Race Selector */}
-        <div className="bg-[#161a23] p-4 rounded-2xl border border-slate-800 mb-6">
-          <label className="text-[9px] font-black uppercase text-slate-500 italic mb-2 block">Selecteer Grand Prix</label>
+        <div className="bg-[#161a23] p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+          <label className="text-[9px] font-black uppercase text-slate-500 italic mb-2 block ml-1">Selecteer Grand Prix</label>
           <select 
             value={selectedRaceId} 
             onChange={(e) => setSelectedRaceId(e.target.value)}
-            className="w-full bg-transparent text-white font-bold uppercase italic focus:outline-none cursor-pointer"
+            className="w-full bg-transparent text-white font-bold uppercase italic focus:outline-none cursor-pointer appearance-none"
           >
             {races.map(r => (
               <option key={r.id} value={r.id} className="bg-[#161a23]">{r.race_name}</option>
@@ -109,7 +116,7 @@ export default function CheckPredictionsPage() {
         </div>
 
         {/* Status Tabel */}
-        <div className="bg-[#161a23] border border-slate-800 rounded-3xl overflow-hidden">
+        <div className="bg-[#161a23] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/5 border-b border-slate-800">
@@ -121,18 +128,47 @@ export default function CheckPredictionsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="p-8 text-center text-xs animate-pulse text-[#005AFF]">DATA OPHALEN...</td></tr>
-              ) : statusList.map(user => (
-                <tr key={user.user_id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
-                  <td className="p-4 font-bold uppercase italic text-sm">{user.user_name}</td>
-                  <td className="p-4 text-center">{StatusIcon(user.hasQualy)}</td>
-                  <td className="p-4 text-center">{StatusIcon(user.hasSprint)}</td>
-                  <td className="p-4 text-center">{StatusIcon(user.hasRace)}</td>
+                <tr>
+                  <td colSpan={4} className="p-12 text-center">
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-[#005AFF] mr-3"></div>
+                    <span className="text-xs font-black italic uppercase text-slate-500">Gegevens laden...</span>
+                  </td>
                 </tr>
-              ))}
+              ) : statusList.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-12 text-center text-xs text-slate-500 uppercase italic">
+                    Geen deelnemers gevonden in de database.
+                  </td>
+                </tr>
+              ) : (
+                statusList.map(user => (
+                  <tr key={user.user_id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors group">
+                    <td className="p-4">
+                      <p className="font-black uppercase italic text-sm text-white group-hover:text-[#005AFF] transition-colors">{user.user_name}</p>
+                      <p className="text-[7px] text-slate-600 font-mono uppercase tracking-tighter">{user.user_id}</p>
+                    </td>
+                    <td className="p-4 text-center">{StatusIcon(user.hasQualy)}</td>
+                    <td className="p-4 text-center">{StatusIcon(user.hasSprint)}</td>
+                    <td className="p-4 text-center">{StatusIcon(user.hasRace)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Info Legend */}
+        <div className="mt-6 flex justify-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-[9px] font-bold uppercase text-slate-500 italic">Ingevuld</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <span className="text-[9px] font-bold uppercase text-slate-500 italic">Ontbreekt</span>
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -140,8 +176,16 @@ export default function CheckPredictionsPage() {
 
 function StatusIcon(done: boolean) {
   return done ? (
-    <span className="inline-flex items-center justify-center w-6 h-6 bg-green-500/20 text-green-500 rounded-full text-xs font-black">✓</span>
+    <div className="inline-flex items-center justify-center w-7 h-7 bg-green-500/10 border border-green-500/20 text-green-500 rounded-lg shadow-sm">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
   ) : (
-    <span className="inline-flex items-center justify-center w-6 h-6 bg-red-500/20 text-red-500 rounded-full text-xs font-black">×</span>
+    <div className="inline-flex items-center justify-center w-7 h-7 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg opacity-40">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </div>
   );
 }
