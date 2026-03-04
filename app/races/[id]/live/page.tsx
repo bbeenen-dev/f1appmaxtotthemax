@@ -1,116 +1,115 @@
 import { createClient } from '@/utils/supabase/server';
-import { NextResponse } from 'next/server';
+import Link from 'next/link';
 
-export async function GET() {
+// We zetten de revalidate op 0 voor testen, zodat we zeker weten dat we verse data zien
+export const revalidate = 0;
+
+interface LivePageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function LiveRacePage({ params }: LivePageProps) {
+  // 1. Veilig de params uitpakken
+  const resolvedParams = await params;
+  const raceId = resolvedParams.id;
+
+  if (!raceId) {
+    return <div className="text-white p-10">Geen Race ID gevonden in de URL.</div>;
+  }
+
   const supabase = await createClient();
 
-  try {
-    // 1. BEPAAL DE HUIDIGE RACE
-    const today = new Date().toISOString();
-    const { data: currentRace, error: raceError } = await supabase
-      .from('races')
-      .select('id')
-      .lte('date_start', today)
-      .gte('date_end', today)
-      .single();
+  // 2. Data ophalen met individuele checks
+  const { data: actualResults, error: actualError } = await supabase
+    .from('actual_results')
+    .select('*')
+    .eq('race_id', raceId)
+    .maybeSingle();
 
-    // Voor testdoeleinden: als er geen race is vandaag, pakken we ID 1
-    const raceId = currentRace?.id || 1;
-
-    // 2. HAAL DE ALLERLAATSTE SESSIE-DATA (LIVE)
-    const sessionRes = await fetch(`https://api.openf1.org/v1/sessions?status=active&session_name=Race`);
-    const sessions = await sessionRes.json();
-    const sessionKey = sessions[0]?.session_key || 'latest';
-
-    // 3. HAAL DE DRIVER MAPPING (Nummer -> ID zoals 'VER')
-    const { data: dbDrivers, error: driverError } = await supabase
-      .from('drivers')
-      .select('driver_id, driver_number');
-
-    if (driverError) throw new Error(`Drivers niet gevonden: ${driverError.message}`);
-
-    const numberToId: Record<string, string> = {};
-    dbDrivers?.forEach(d => {
-      if (d.driver_number) numberToId[String(d.driver_number)] = String(d.driver_id);
-    });
-
-    // 4. HAAL LIVE POSITIES VAN OPENF1
-    const response = await fetch(`https://api.openf1.org/v1/position?session_key=${sessionKey}`);
-    const apiData = await response.json();
-
-    if (!apiData || !Array.isArray(apiData) || apiData.length === 0) {
-      return NextResponse.json({ success: false, message: "Geen live data op dit moment" });
-    }
-
-    // 5. VERWERK POSITIES (Laatste positie per driver_number)
-    const latestMap: Record<string, number> = {};
-    apiData.forEach((entry: any) => {
-      latestMap[String(entry.driver_number)] = entry.position;
-    });
-
-    const sortedIds = Object.entries(latestMap)
-      .sort(([, posA], [, posB]) => posA - posB)
-      .map(([num]) => numberToId[num])
-      .filter(Boolean);
-
-    // 6. UPDATE DATABASE: Baanstand (actual_results)
-    const { error: upsertResError } = await supabase
-      .from('actual_results')
-      .upsert({
-        race_id: raceId,
-        live_positions: sortedIds,
-        last_updated: new Date().toISOString()
-      }, { onConflict: 'race_id' });
-
-    if (upsertResError) throw new Error(`Fout bij updaten actual_results: ${upsertResError.message}`);
-
-    // 7. HAAL VOORSPELLINGEN EN BEREKEN SCORES
-    const { data: allPredictions, error: predError } = await supabase
-      .from('predictions_race')
-      .select('user_id, top_10_drivers')
-      .eq('race_id', raceId);
-
-    if (predError) throw new Error(`Voorspellingen niet gevonden: ${predError.message}`);
-
-    const scoreEntries = (allPredictions || []).map(pred => {
-      let points = 0;
-      const userPreds = (pred.top_10_drivers as string[]) || [];
-      
-      userPreds.forEach((driverId, index) => {
-        const actualPos = sortedIds.indexOf(driverId);
-        if (actualPos === index) {
-          points += 5; // Exact
-        } else if (actualPos !== -1 && Math.abs(index - actualPos) === 1) {
-          points += 2; // 1 plek verschil
-        }
-      });
-
-      return { 
-        user_id: pred.user_id, 
-        race_id: raceId, 
-        points, 
-        updated_at: new Date().toISOString() 
-      };
-    });
-
-    // 8. UPDATE DATABASE: Virtuele scores (actual_scores)
-    if (scoreEntries.length > 0) {
-      const { error: upsertScoreError } = await supabase
-        .from('actual_scores')
-        .upsert(scoreEntries, { onConflict: 'user_id, race_id' });
-      
-      if (upsertScoreError) throw new Error(`Fout bij updaten actual_scores: ${upsertScoreError.message}`);
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      session: sessionKey, 
-      race: raceId,
-      updated_drivers: sortedIds.length 
-    });
-
-  } catch (err: any) {
-    console.error("Sync Error:", err.message);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  // Als de tabel 'actual_results' niet bestaat of er is een database-error
+  if (actualError) {
+    return (
+      <div className="min-h-screen bg-[#0f111a] text-white p-10 font-f1">
+        <h1 className="text-red-500 font-bold">Database Configuratie Fout</h1>
+        <p className="text-xs text-slate-400 mt-2">Check of de tabel 'actual_results' bestaat in Supabase.</p>
+        <p className="text-[10px] text-slate-600 mt-4">Error: {actualError.message}</p>
+      </div>
+    );
   }
+
+  // 3. Als er simpelweg nog geen data is gesynct voor deze race
+  if (!actualResults || !actualResults.live_positions) {
+    return (
+      <div className="min-h-screen bg-[#0f111a] flex flex-col items-center justify-center text-white p-6 font-f1">
+        <div className="w-12 h-12 border-4 border-[#005AFF] border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h2 className="text-xl font-black italic uppercase tracking-tighter">Wachten op Race Data</h2>
+        <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-2 mb-8 text-center">
+          Er is nog geen live-data beschikbaar voor deze race.<br/>Roep eerst de sync-API aan.
+        </p>
+        <Link href={`/races/${raceId}`} className="px-6 py-2 border border-slate-700 text-slate-400 text-[10px] uppercase font-bold rounded-full hover:bg-slate-800 transition-all">
+          ← Terug naar Dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  // 4. De rest van de data ophalen
+  const { data: leaderboard } = await supabase.from('leaderboard').select('*');
+  const { data: liveScores } = await supabase.from('actual_scores').select('*').eq('race_id', raceId);
+
+  // 5. Berekeningen maken
+  const liveStanding = (leaderboard || []).map(user => {
+    const currentRacePoints = liveScores?.find(s => s.user_id === user.user_id)?.points || 0;
+    return {
+      ...user,
+      currentRacePoints,
+      virtualTotal: (user.total_points || 0) + currentRacePoints
+    };
+  }).sort((a, b) => b.virtualTotal - a.virtualTotal);
+
+  return (
+    <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 font-f1">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-10">
+          <Link href={`/races/${raceId}`} className="text-slate-500 text-[10px] uppercase font-bold tracking-widest hover:text-[#005AFF]">
+            ← Race Control
+          </Link>
+          <div className="bg-red-600 px-2 py-0.5 rounded text-[8px] font-black uppercase animate-pulse">Live</div>
+        </div>
+
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2">
+          Live <span className="text-[#005AFF]">Tracker</span>
+        </h1>
+        <p className="text-slate-500 text-[10px] uppercase tracking-[0.3em] mb-8 italic">Virtuele Tussenstand</p>
+
+        <div className="bg-[#161a23] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-[#1c222d] text-slate-500 text-[9px] uppercase tracking-widest">
+                <th className="p-5 font-black">Pos</th>
+                <th className="p-5 font-black">Deelnemer</th>
+                <th className="p-5 text-right font-black">Totaal (V)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/50">
+              {liveStanding.map((user, index) => (
+                <tr key={user.user_id} className="hover:bg-[#1c222d] transition-colors">
+                  <td className="p-5 font-black italic text-[#005AFF]">{index + 1}</td>
+                  <td className="p-5 font-black uppercase text-sm italic">{user.username}</td>
+                  <td className="p-5 text-right">
+                    <div className="flex flex-col items-end">
+                      <span className="font-black text-xl italic">{user.virtualTotal}</span>
+                      <span className="text-[8px] text-green-500 font-bold uppercase tracking-tighter">
+                        +{user.currentRacePoints} live
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
