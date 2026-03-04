@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
+// Forceer Next.js om de pagina telkens vers op te bouwen
 export const dynamic = "force-dynamic";
 
 interface LeaderboardEntry {
@@ -25,18 +26,21 @@ export default function Leaderboard() {
     async function fetchLeaderboard() {
       setLoading(true);
       
-      // We halen alle kolommen expliciet op en forceren een range tot 100
+      // We gebruiken .select() met de exacte kolommen uit je nieuwe View.
+      // De .neq() filter dient als cache-breaker om de Vercel/Supabase cache te omzeilen.
       const { data: board, error } = await supabase
         .from("leaderboard")
-        .select("urer_name, nickname, total_points, grand_total")
+        .select("nickname, urer_name, total_points, grand_total")
+        .neq("nickname", "CACHE_BREAKER_NULL") 
         .range(0, 100) 
         .order("grand_total", { ascending: false });
 
       if (!error && board) {
-        console.log(`Leaderboard geladen: ${board.length} spelers.`);
+        // Controleer je browser console (F12) om te zien of hier nu '11' staat.
+        console.log(`[${new Date().toLocaleTimeString()}] Leaderboard geladen: ${board.length} spelers.`);
         setData(board);
       } else if (error) {
-        console.error("Fout:", error.message);
+        console.error("Fout bij ophalen leaderboard:", error.message);
       }
       setLoading(false);
     }
@@ -44,7 +48,11 @@ export default function Leaderboard() {
     fetchLeaderboard();
   }, [supabase]);
 
-  if (loading) return <div className="text-center p-10 animate-pulse font-f1 italic text-slate-500 uppercase text-xs">Stand laden...</div>;
+  if (loading) return (
+    <div className="text-center p-10 animate-pulse font-f1 italic text-slate-500 uppercase text-xs">
+      Stand laden...
+    </div>
+  );
 
   return (
     <section className="mt-12 mb-24 px-4">
@@ -82,7 +90,7 @@ export default function Leaderboard() {
                     </td>
                     <td className="py-4 px-2">
                       <p className="font-f1 font-black italic uppercase text-sm tracking-normal text-white">
-                        {/* HIER GEBRUIKEN WE NU PRIMAIR DE NICKNAME */}
+                        {/* We tonen nu de nickname die in je SQL resultaat staat */}
                         {entry.nickname || entry.urer_name || "Anonieme Coureur"}
                       </p>
                     </td>
@@ -103,6 +111,10 @@ export default function Leaderboard() {
             </div>
           )}
         </div>
+        
+        <p className="text-center mt-6 text-[10px] text-slate-500 font-f1 uppercase tracking-[0.2em] italic">
+          Punten worden automatisch berekend na elke sessie
+        </p>
       </div>
     </section>
   );
