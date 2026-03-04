@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
-// Dwing Next.js om de pagina niet statisch te cachen
 export const dynamic = "force-dynamic";
 
 interface LeaderboardEntry {
@@ -26,20 +25,18 @@ export default function Leaderboard() {
     async function fetchLeaderboard() {
       setLoading(true);
       
+      // We halen alle kolommen expliciet op en forceren een range tot 100
       const { data: board, error } = await supabase
         .from("leaderboard")
-        .select("*")
-        // RANGE FORCEERT MEER DAN 10 RESULTATEN
+        .select("urer_name, nickname, total_points, grand_total")
         .range(0, 100) 
-        .order("grand_total", { ascending: false })
-        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
+        .order("grand_total", { ascending: false });
 
       if (!error && board) {
-        // Log dit om te controleren in je browser (F12 -> Console)
-        console.log(`[${new Date().toLocaleTimeString()}] Leaderboard geladen: ${board.length} deelnemers.`);
+        console.log(`Leaderboard geladen: ${board.length} spelers.`);
         setData(board);
       } else if (error) {
-        console.error("Fout bij ophalen leaderboard:", error.message);
+        console.error("Fout:", error.message);
       }
       setLoading(false);
     }
@@ -47,14 +44,16 @@ export default function Leaderboard() {
     fetchLeaderboard();
   }, [supabase]);
 
-  if (loading) return <div className="text-center p-10 animate-pulse font-f1 italic text-slate-500 uppercase text-xs">Loading Standings...</div>;
+  if (loading) return <div className="text-center p-10 animate-pulse font-f1 italic text-slate-500 uppercase text-xs">Stand laden...</div>;
 
   return (
     <section className="mt-12 mb-24 px-4">
       <div className="max-w-xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-1 h-6 bg-[#e10600]"></div>
-          <h2 className="font-f1 text-xl font-black italic uppercase tracking-tighter">Stand <span className="text-[#e10600]">WK Voorspellen</span></h2>
+          <h2 className="font-f1 text-xl font-black italic uppercase tracking-tighter">
+            Stand <span className="text-[#e10600]">WK Voorspellen</span>
+          </h2>
         </div>
 
         <div className="bg-[#161a23] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
@@ -83,6 +82,7 @@ export default function Leaderboard() {
                     </td>
                     <td className="py-4 px-2">
                       <p className="font-f1 font-black italic uppercase text-sm tracking-normal text-white">
+                        {/* HIER GEBRUIKEN WE NU PRIMAIR DE NICKNAME */}
                         {entry.nickname || entry.urer_name || "Anonieme Coureur"}
                       </p>
                     </td>
@@ -103,10 +103,6 @@ export default function Leaderboard() {
             </div>
           )}
         </div>
-        
-        <p className="text-center mt-6 text-[10px] text-slate-500 font-f1 uppercase tracking-[0.2em] italic">
-          Punten worden automatisch berekend na elke sessie
-        </p>
       </div>
     </section>
   );
