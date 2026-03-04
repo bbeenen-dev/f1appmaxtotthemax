@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
+// Dwing Next.js om geen statische cache te gebruiken voor dit leaderboard
+export const dynamic = "force-dynamic";
+
 interface LeaderboardEntry {
   urer_name: string;
   nickname: string;
@@ -21,12 +24,11 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function fetchLeaderboard() {
-      // LIMIT VERWIJDERD: Nu worden alle gebruikers opgehaald
-      // ORDER TOEGEVOEGD: Sorteert op grand_total (hoogste eerst)
+      // We halen alle gebruikers op en sorteren direct op de hoogste score
       const { data: board, error } = await supabase
         .from("leaderboard")
         .select("*")
-        .order("grand_total", { ascending: false }); 
+        .order("grand_total", { ascending: false });
 
       if (!error && board) {
         setData(board);
