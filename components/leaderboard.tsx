@@ -21,10 +21,12 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function fetchLeaderboard() {
+      // LIMIT VERWIJDERD: Nu worden alle gebruikers opgehaald
+      // ORDER TOEGEVOEGD: Sorteert op grand_total (hoogste eerst)
       const { data: board, error } = await supabase
         .from("leaderboard")
         .select("*")
-        .limit(10);
+        .order("grand_total", { ascending: false }); 
 
       if (!error && board) {
         setData(board);
@@ -69,7 +71,7 @@ export default function Leaderboard() {
                       </span>
                     </td>
                     <td className="py-4 px-2">
-                      <p className="font-f1 font-black italic uppercase text-sm tracking-normal">
+                      <p className="font-f1 font-black italic uppercase text-sm tracking-normal text-white">
                         {entry.nickname || entry.urer_name || "Anonieme Coureur"}
                       </p>
                     </td>
