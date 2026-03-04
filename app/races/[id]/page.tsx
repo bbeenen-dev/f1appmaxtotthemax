@@ -1,158 +1,217 @@
-import { createClient } from '@/utils/supabase/server';
+"use client";
+
+import { use, useEffect, useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
-interface LivePageProps {
-  params: Promise<{ id: string }>; // Params is een Promise in de nieuwere Next.js versies
+interface RaceData {
+  id: string;
+  race_name: string;
+  city_name: string;
+  sprint_race_start: string | null;
+  round: number;
 }
 
-export default async function LiveRacePage({ params }: LivePageProps) {
-  // 1. UNWRAP DE PARAMS
-  const resolvedParams = await params;
+interface PredictionStatus {
+  qualy: boolean;
+  sprint: boolean;
+  race: boolean;
+}
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function RaceCardPage({ params }: PageProps) {
+  const resolvedParams = use(params);
   const raceId = resolvedParams.id;
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  const supabase = await createClient();
+  const [race, setRace] = useState<RaceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [status, setStatus] = useState<PredictionStatus>({
+    qualy: false,
+    sprint: false,
+    race: false
+  });
 
-  // 2. HAAL DE DATA OP (met error handling)
-  const [actualRes, leaderboardRes, scoresRes] = await Promise.all([
-    supabase.from('actual_results').select('*').eq('race_id', raceId).maybeSingle(),
-    supabase.from('leaderboard').select('user_id, total_points, username').order('total_points', { ascending: false }),
-    supabase.from('actual_scores').select('user_id, points').eq('race_id', raceId)
-  ]);
+  useEffect(() => {
+    let isMounted = true;
+    async function getRaceAndStatus() {
+      if (!raceId || String(raceId).includes('%')) return;
+      try {
+        setLoading(true);
+        const { data: raceData, error: raceError } = await supabase
+          .from('races')
+          .select('id, race_name, city_name, sprint_race_start, round')
+          .eq('id', raceId)
+          .single();
 
-  // Foutmelding als de tabel 'actual_results' nog helemaal leeg is voor deze race
-  if (!actualRes.data) {
-    return (
-      <div className="min-h-screen bg-[#0f111a] flex flex-col items-center justify-center text-white p-6 font-f1">
-        <div className="w-16 h-1 w-full max-w-[200px] bg-slate-800 rounded-full mb-8 overflow-hidden">
-            <div className="h-full bg-[#005AFF] animate-progress-fast w-1/3"></div>
-        </div>
-        <h2 className="text-xl font-black italic uppercase tracking-tighter mb-2">Geen live data</h2>
-        <p className="text-slate-500 text-[10px] uppercase tracking-widest mb-8">De race is nog niet gestart of gesynct.</p>
-        <Link href={`/races/${raceId}`} className="text-[#005AFF] text-[10px] font-black uppercase tracking-widest border border-[#005AFF]/30 px-6 py-3 rounded-full hover:bg-[#005AFF]/10 transition-all">
-          ← Terug naar Dashboard
-        </Link>
+        if (raceError) throw raceError;
+        if (isMounted) setRace(raceData);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+
+        if (user && isMounted) {
+          const [qualyCheck, sprintCheck, raceCheck] = await Promise.all([
+            supabase.from('predictions_qualifying').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
+            supabase.from('predictions_sprint').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
+            supabase.from('predictions_race').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
+          ]);
+
+          if (isMounted) {
+            setStatus({
+              qualy: !!qualyCheck.data,
+              sprint: !!sprintCheck.data,
+              race: !!raceCheck.data
+            });
+          }
+        }
+      } catch (err: any) {
+        if (isMounted) setDbError(err.message || "Er ging iets mis.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    getRaceAndStatus();
+    return () => { isMounted = false; };
+  }, [raceId, supabase]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#0f111a] flex items-center justify-center">
+      <div className="text-[#e10600] font-f1 font-black italic animate-pulse text-2xl tracking-widest uppercase text-center">
+        Loading Race Dashboard...
       </div>
-    );
-  }
-
-  // 3. LOGICA VOOR STAND EN PIJLTJES
-  const oldPositions = new Map();
-  leaderboardRes.data?.forEach((user, index) => {
-    oldPositions.set(user.user_id, index + 1);
-  });
-
-  const liveStanding = (leaderboardRes.data || []).map(user => {
-    const livePointsEntry = scoresRes.data?.find(s => s.user_id === user.user_id);
-    const livePoints = livePointsEntry ? livePointsEntry.points : 0;
-    const totalVirtual = (user.total_points || 0) + livePoints;
-
-    return {
-      user_id: user.user_id,
-      username: user.username,
-      pointsBeforeRace: user.total_points || 0,
-      virtualRacePoints: livePoints,
-      totalVirtualPoints: totalVirtual,
-      oldPos: oldPositions.get(user.user_id) || 99
-    };
-  });
-
-  const sortedLiveStanding = liveStanding.sort((a, b) => b.totalVirtualPoints - a.totalVirtualPoints);
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 font-f1 pb-20">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
+      <div className="max-w-2xl mx-auto">
         
-        {/* NAVIGATIE */}
-        <div className="flex items-center justify-between">
-          <Link href={`/races/${raceId}`} className="text-slate-500 text-[10px] uppercase hover:text-[#005AFF] transition-all tracking-widest flex items-center gap-2 font-bold">
-            <span>←</span> RACE CONTROL
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold italic">Live Tracker</span>
-          </div>
-        </div>
+        <Link href="/races" className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-8 tracking-[0.2em] hover:text-[#e10600] transition-colors">
+          <span className="text-lg transition-transform group-hover:-translate-x-1">←</span> Kalender
+        </Link>
 
-        {/* TITEL SECTIE */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 border-[#005AFF] pb-6 gap-4">
-          <div>
-            <h1 className="text-5xl font-black italic uppercase tracking-tighter leading-none">
-              Live <span className="text-[#005AFF]">Stand</span>
-            </h1>
+        <header className="mb-12 relative">
+          <div className="flex items-baseline gap-3 mb-2">
+            <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase tracking-tighter">Round {race?.round}</span>
+            <div className="h-[2px] flex-grow bg-slate-800/50"></div>
           </div>
-          <div className="bg-[#161a23] px-4 py-2 rounded-xl border border-slate-800 text-right">
-            <span className="text-[9px] text-slate-500 uppercase font-black block mb-1">Laatste Update</span>
-            <p className="font-mono text-[#005AFF] text-xl font-bold">
-              {new Date(actualRes.data.last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
-          </div>
-        </div>
+          <h1 className="text-5xl md:text-6xl font-f1 font-black italic uppercase text-white leading-none tracking-tighter">
+            {race?.race_name}
+          </h1>
+          <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
+        </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LINKER KOLOM: BAANPOSITIE */}
-          <div className="lg:col-span-1 space-y-4">
-            <h2 className="text-[11px] font-black uppercase italic text-slate-500 px-2 tracking-widest">Baanpositie</h2>
-            <div className="bg-[#161a23] rounded-2xl p-4 border border-slate-800 shadow-2xl space-y-1">
-              {actualRes.data.live_positions.map((driverId: string, index: number) => (
-                <div key={driverId} className="flex items-center gap-3 py-2.5 px-3 bg-[#1c222d]/50 rounded-lg border-l-2 border-transparent hover:border-[#005AFF] transition-all group">
-                  <span className={`w-5 font-black italic text-sm ${index < 3 ? 'text-[#005AFF]' : 'text-slate-600'}`}>
-                    {index + 1}
-                  </span>
-                  <span className="font-black uppercase text-xs tracking-wider">{driverId}</span>
-                </div>
-              ))}
-            </div>
+        {dbError && (
+          <div className="mb-6 p-4 bg-red-900/10 border border-red-900/50 rounded-xl text-red-500 text-[10px] font-f1 uppercase tracking-widest italic text-center">
+            {dbError}
           </div>
+        )}
 
-          {/* RECHTER KOLOM: KLASSEMENT */}
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-[11px] font-black uppercase italic text-slate-500 px-2 tracking-widest">Klassement (Virtueel)</h2>
-            <div className="bg-[#161a23] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#1c222d] text-[9px] uppercase tracking-[0.2em] text-slate-500">
-                    <th className="p-5 text-center">Trend</th>
-                    <th className="p-5">Deelnemer</th>
-                    <th className="p-5 text-center">Race</th>
-                    <th className="p-5 text-right">Totaal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {sortedLiveStanding.map((entry, index) => {
-                    const currentPos = index + 1;
-                    const diff = entry.oldPos - currentPos;
+        {/* DE VOORSPELLINGSKAARTEN (QUALY, SPRINT, RACE) */}
+        <div className="grid gap-6">
+          {race?.sprint_race_start && (
+            <PredictionCard 
+              title="Sprint Race" 
+              subtitle="Short Burst Points • Top 8"
+              href={`/races/${raceId}/predict/sprint`}
+              isDone={status.sprint}
+              accentColor="bg-orange-500"
+            />
+          )}
 
-                    return (
-                      <tr key={entry.user_id} className="hover:bg-[#1c222d]/80 transition-colors">
-                        <td className="p-5 text-center">
-                            {diff > 0 ? (
-                              <span className="text-green-500 font-black text-xs">▲{diff}</span>
-                            ) : diff < 0 ? (
-                              <span className="text-red-500 font-black text-xs">▼{Math.abs(diff)}</span>
-                            ) : (
-                              <span className="text-slate-700 font-black text-[10px]">—</span>
-                            )}
-                        </td>
-                        <td className="p-5 font-black uppercase text-sm italic">{entry.username}</td>
-                        <td className="p-5 text-center">
-                          <span className="bg-[#005AFF]/10 text-[#005AFF] px-2 py-1 rounded text-[11px] font-black border border-[#005AFF]/20">
-                            +{entry.virtualRacePoints}
-                          </span>
-                        </td>
-                        <td className="p-5 text-right font-black text-xl italic leading-none">
-                          {entry.totalVirtualPoints}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PredictionCard 
+            title="Qualifying" 
+            subtitle="Top 3 Shootout"
+            href={`/races/${raceId}/predict/qualy`}
+            isDone={status.qualy}
+            accentColor="bg-red-600"
+          />
+
+          <PredictionCard 
+            title="Grand Prix" 
+            subtitle="Main Event • Top 10 + Fastest Lap"
+            href={`/races/${raceId}/predict/race`}
+            isDone={status.race}
+            accentColor="bg-[#e10600]"
+          />
+
+          {/* SCHEIDINGSLIJN */}
+          <div className="h-[1px] w-full bg-slate-800/50 my-4" />
+
+          {/* LIVE TRACKER ONDERAAN */}
+          <LiveCard 
+            title="Live Tracker" 
+            subtitle="Virtual Standing • Real-time Updates"
+            href={`/races/${raceId}/live`} 
+            accentColor="#005AFF" 
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+// COMPONENT VOOR DE LIVE TRACKER KNOP
+function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
+        <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-[#005AFF] animate-pulse"></span>
+                <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+              </div>
+            </div>
+            <span className="text-[#005AFF] text-2xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+          </div>
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100" style={{ backgroundColor: accentColor }} />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// COMPONENT VOOR DE VOORSPELLINGS OPTIES
+function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className={`text-2xl font-f1 font-black italic uppercase leading-none mb-1 transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
+              <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+            </div>
+            {isDone ? (
+              <div className="flex items-center gap-2">
+                <span className="font-f1 text-[10px] text-green-500 font-bold italic tracking-tighter uppercase">Ready</span>
+                <div className="text-green-500">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+              </div>
+            ) : (
+              <span className="text-[#e10600] text-2xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+            )}
+          </div>
+          <div className={`absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
+        </div>
+      </div>
+    </Link>
   );
 }
