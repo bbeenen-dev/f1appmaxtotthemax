@@ -22,7 +22,6 @@ export default function AdminResultsPage() {
   const params = useParams();
   const router = useRouter();
   
-  // State voor selectors
   const [currentRaceId, setCurrentRaceId] = useState<string>(params.raceid as string);
   const [activeSession, setActiveSession] = useState<SessionType>("race");
   
@@ -36,7 +35,7 @@ export default function AdminResultsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Configuratie mapping voor database interactie
+  // Configuratie mapping exact volgens jouw database velden
   const configMap = {
     sprint: { title: "Sprint", limit: 8, table: "results_sprint", field: "top_8_drivers" },
     qualy: { title: "Qualifying", limit: 3, table: "results_qualifying", field: "top_3_drivers" },
@@ -45,7 +44,7 @@ export default function AdminResultsPage() {
 
   const config = configMap[activeSession];
 
-  // 1. Haal alle races op voor de picklist
+  // 1. Haal alle races op
   useEffect(() => {
     async function getRaces() {
       const { data } = await supabase
@@ -61,8 +60,6 @@ export default function AdminResultsPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      
-      // Haal actieve coureurs op
       const { data: drv } = await supabase
         .from("drivers")
         .select("driver_id, driver_name, team_id")
@@ -70,7 +67,6 @@ export default function AdminResultsPage() {
         .order("driver_name", { ascending: true });
       
       if (drv) {
-        // Check of er al een uitslag is voor deze race + sessie
         const { data: existing } = await supabase
           .from(config.table)
           .select("*")
@@ -79,7 +75,6 @@ export default function AdminResultsPage() {
 
         if (existing && existing[config.field]) {
           const savedIds = existing[config.field] as string[];
-          // Sorteer coureurs op basis van de opgeslagen uitslag, rest alfabetisch eronder
           const reordered = [...drv].sort((a, b) => {
             const idxA = savedIds.indexOf(a.driver_id);
             const idxB = savedIds.indexOf(b.driver_id);
@@ -116,7 +111,7 @@ export default function AdminResultsPage() {
     const topIds = drivers.slice(0, config.limit).map(d => d.driver_id);
 
     try {
-      // STAP A: Sla uitslag op in de sessie-tabel
+      // STAP A: Sla de officiële uitslag op
       const { error: upsertError } = await supabase
         .from(config.table)
         .upsert({
@@ -127,12 +122,12 @@ export default function AdminResultsPage() {
 
       if (upsertError) throw upsertError;
 
-      // STAP B: Punten berekenen
-      // (Deze logica is behouden van je originele code voor de tweetrapsraket)
+      // STAP B: Bepaal de juiste voorspellingstabel en kolom (Top X drivers)
       const predictionTable = activeSession === 'race' ? 'predictions_race' : 
                              activeSession === 'qualy' ? 'predictions_qualifying' : 'predictions_sprint';
-      const predictionField = activeSession === 'race' ? 'predicted_10_drivers' : 
-                             activeSession === 'qualy' ? 'predicted_3_drivers' : 'predicted_8_drivers';
+      
+      const predictionField = activeSession === 'race' ? 'top_10_drivers' : 
+                             activeSession === 'qualy' ? 'top_3_drivers' : 'top_8_drivers';
 
       const { data: allPredictions, error: predError } = await supabase
         .from(predictionTable)
@@ -141,18 +136,31 @@ export default function AdminResultsPage() {
 
       if (predError) throw predError;
 
+      // STAP C: Punten berekenen per gebruiker
       const scoreEntries = (allPredictions || []).map(pred => {
         const userPreds = (pred as any)[predictionField] as string[] || [];
         let points = 0;
 
         userPreds.forEach((driverId, index) => {
           const actualPos = topIds.indexOf(driverId);
+          
           if (activeSession === 'race') {
-            if (actualPos === index) points += 5;
-            else if (actualPos !== -1 && Math.abs(index - actualPos) === 1) points += 2;
+            // Main Race: 5pt voor exact, 2pt voor 1 plek verschil
+            if (actualPos === index) {
+              points += 5;
+            } else if (actualPos !== -1) {
+              const distance = Math.abs(index - actualPos);
+              if (distance === 1) points += 2;
+            }
           } 
-          else if (activeSession === 'qualy' && actualPos === index) points += 3;
-          else if (activeSession === 'sprint' && actualPos === index) points += 1;
+          else if (activeSession === 'qualy') {
+            // Qualifying: 3pt voor exact (Top 3)
+            if (actualPos === index) points += 3;
+          } 
+          else if (activeSession === 'sprint') {
+            // Sprint: 1pt voor exact (Top 8)
+            if (actualPos === index) points += 1;
+          }
         });
 
         return {
@@ -163,19 +171,23 @@ export default function AdminResultsPage() {
         };
       });
 
+      // STAP D: Sla scores op in de juiste scoretabel
       const scoreTable = activeSession === 'race' ? 'scores_race' : 
                         activeSession === 'qualy' ? 'scores_qualifying' : 'scores_sprint';
 
-      const { error: scoreError } = await supabase
-        .from(scoreTable)
-        .upsert(scoreEntries, { onConflict: 'user_id, race_id' });
+      if (scoreEntries.length > 0) {
+        const { error: scoreError } = await supabase
+          .from(scoreTable)
+          .upsert(scoreEntries, { onConflict: 'user_id, race_id' });
 
-      if (scoreError) throw scoreError;
+        if (scoreError) throw scoreError;
+      }
 
-      alert(`Gepubliceerd! Uitslag voor ${config.title} opgeslagen en scores berekend.`);
+      alert(`Succes! Uitslag opgeslagen en punten berekend voor ${scoreEntries.length} deelnemers.`);
       
     } catch (err: any) {
-      alert("Fout: " + err.message);
+      console.error("Fout:", err);
+      alert("Er ging iets mis: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -207,9 +219,7 @@ export default function AdminResultsPage() {
             Uitslag <span className="text-[#005AFF]">Invoeren</span>
           </h1>
 
-          {/* PICKLISTS SECTIE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Race Picklist */}
             <div className="space-y-2">
               <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Grand Prix</label>
               <select 
@@ -223,7 +233,6 @@ export default function AdminResultsPage() {
               </select>
             </div>
 
-            {/* Type Picklist */}
             <div className="space-y-2">
               <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Sessie Type</label>
               <select 
@@ -300,15 +309,7 @@ export default function AdminResultsPage() {
               disabled={saving}
               className="w-full bg-[#005AFF] hover:bg-white hover:text-[#005AFF] disabled:opacity-30 text-white font-black italic uppercase py-5 rounded-2xl shadow-[0_10px_30px_rgba(0,90,255,0.3)] transition-all text-sm tracking-widest flex items-center justify-center gap-3"
             >
-              {saving ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  VERWERKEN...
-                </>
-              ) : `BEVESTIG ${config.title} UITSLAG`}
+              {saving ? "VERWERKEN..." : `BEVESTIG ${config.title} UITSLAG`}
             </button>
           </div>
         </div>
