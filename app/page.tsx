@@ -57,11 +57,11 @@ export default async function HomePage() {
     if (data) hasPredictedSeason = true;
   }
 
-  // 4. Haal Leaderboard data op (Top 10)
+  // 4. HAAL LEADERBOARD DATA OP (Aanpassing: Limit verwijderd & Sortering toegevoegd)
   const { data: leaderboard } = await supabase
     .from('leaderboard')
     .select('*')
-    .limit(10);
+    .order('grand_total', { ascending: false }); // Zorgt dat de 11e ook op de juiste plek staat
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white pb-32 font-f1">
@@ -180,7 +180,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* 5. STANDEN - VERBETERDE VERSIE */}
+        {/* 5. STANDEN - AANGEPASTE VERSIE */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6">
@@ -207,9 +207,9 @@ export default async function HomePage() {
                         {index + 1}
                       </span>
                       <div>
-                        {/* Vergroting naam naar text-sm en verwijdering onderschrift */}
+                        {/* AANPASSING: Nickname heeft nu prioriteit boven urer_name */}
                         <p className="text-sm font-black uppercase italic leading-none">
-                          {player.urer_name || player.nickname}
+                          {player.nickname || player.urer_name || "Anonieme Coureur"}
                         </p>
                       </div>
                     </div>
