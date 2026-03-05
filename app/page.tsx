@@ -9,17 +9,14 @@ import { headers } from 'next/headers'
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  // We roepen headers aan om dynamische rendering te forceren en awaiten de client
   const headerStack = await headers();
   const supabase = await createClient();
   
-  // FEATURE FLAGS
   const showMyPredictions = false;
 
-  // 1. DYNAMISCHE PRIJZENPOT LOGICA (Bitcoin Fluctuaat)
-  const initialBtcPrice = 58516; // De koers op moment van inleg
-  const initialDepositEuro = 120; // De oorspronkelijke inleg
-  const fixedBtcAmount = initialDepositEuro / initialBtcPrice; // ≈ 0.00205072 BTC
+  const initialBtcPrice = 58516;
+  const initialDepositEuro = 120;
+  const fixedBtcAmount = initialDepositEuro / initialBtcPrice;
   
   let currentEuroValue = initialDepositEuro; 
   let currentBtcPrice = initialBtcPrice;
@@ -27,7 +24,7 @@ export default async function HomePage() {
   try {
     const response = await fetch(
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur',
-      { next: { revalidate: 300 } } // 5 minuten cache
+      { next: { revalidate: 300 } }
     );
     const data = await response.json();
     if (data.bitcoin && data.bitcoin.eur) {
@@ -38,12 +35,10 @@ export default async function HomePage() {
     console.error("BTC API Error:", error);
   }
 
-  // 2. Deadline logica
   const seasonDeadline = new Date('2026-03-06T17:00:00');
   const now = new Date();
   const isBeforeSeasonStart = now < seasonDeadline;
 
-  // 3. Check user & Jaarvoorspelling
   const { data: { user } } = await supabase.auth.getUser();
   let hasPredictedSeason = false;
   
@@ -57,11 +52,10 @@ export default async function HomePage() {
     if (data) hasPredictedSeason = true;
   }
 
-  // 4. HAAL LEADERBOARD DATA OP (Aanpassing: Limit verwijderd & Sortering toegevoegd)
   const { data: leaderboard } = await supabase
     .from('leaderboard')
     .select('*')
-    .order('grand_total', { ascending: false }); // Zorgt dat de 11e ook op de juiste plek staat
+    .order('grand_total', { ascending: false });
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white pb-32 font-f1">
@@ -79,7 +73,7 @@ export default async function HomePage() {
 
       <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-8 -mt-6 relative z-10">
         
-        {/* 0. PRIJZENPOT (FLUCTUEREND) */}
+        {/* 0. PRIJZENPOT (MET GROTERE PERCENTAGE INDICATOR) */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-2xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_50%,#f7931a_0deg,#f7931a_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 border border-white/5 transition-all group-hover:bg-[#1c222d]">
@@ -105,8 +99,9 @@ export default async function HomePage() {
               </div>
               
               <div className="flex flex-col items-center">
-                 <div className={`text-[10px] font-black italic mb-1 ${currentEuroValue >= 120 ? 'text-green-500' : 'text-red-500'}`}>
-                    {currentEuroValue >= 120 ? '▲' : '▼'} 
+                 {/* AANGEPAST: Percentage indicator nu groter (text-sm), font-black en italic */}
+                 <div className={`text-sm font-black italic mb-2 tracking-tighter flex items-center gap-1 ${currentEuroValue >= 120 ? 'text-green-500' : 'text-red-500'}`}>
+                    <span className="text-xs">{currentEuroValue >= 120 ? '▲' : '▼'}</span> 
                     {(((currentEuroValue - 120) / 120) * 100).toFixed(1)}%
                  </div>
                  <div className="bg-[#f7931a]/10 p-3 rounded-2xl border border-[#f7931a]/20 shadow-[0_0_15px_rgba(247,147,26,0.1)]">
@@ -138,14 +133,14 @@ export default async function HomePage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     {!hasPredictedSeason && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>}
-                    <h2 className="text-2xl font-black italic uppercase text-white">Jaarvoorspelling</h2>
+                    <h2 className="text-2xl font-black italic uppercase text-white leading-tight">Jaarvoorspelling</h2>
                   </div>
-                  <p className="text-slate-500 text-[9px] uppercase tracking-widest italic">Deadline: Vrijdag 6 maart 17:00u</p>
+                  <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">Deadline: Vrijdag 6 maart 17:00u</p>
                 </div>
                 {hasPredictedSeason && (
-                  <div className="bg-green-500/20 text-green-500 p-1 rounded-full border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <div className="text-green-500">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 )}
@@ -158,29 +153,17 @@ export default async function HomePage() {
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] overflow-hidden">
+            <div className="px-6 pt-6">
+                <h2 className="text-2xl font-black italic uppercase text-white leading-tight">Jaarkalender</h2>
+                <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">Alle races van het 2026 seizoen</p>
+            </div>
             <Suspense fallback={<div className="p-8 text-slate-500 italic uppercase">Laden...</div>}>
               <RaceCalendar />
             </Suspense>
           </div>
         </section>
 
-        {/* 4. MIJN VOORSPELLINGEN */}
-        {showMyPredictions && (
-          <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
-            <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#3b82f6_0deg,#3b82f6_40deg,transparent_90deg)] opacity-30 group-hover:opacity-100 transition-opacity" />
-            <Link href="/my-predictions" className="relative block bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 transition-colors group-hover:bg-[#1c222d]">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-black italic uppercase text-white group-hover:text-blue-400 transition-colors">Mijn Voorspellingen</h2>
-                  <p className="text-slate-500 text-[9px] uppercase tracking-widest italic">Bekijk je keuzes & resultaten</p>
-                </div>
-                <div className="text-blue-500/50 text-xl font-black italic tracking-tighter">HISTORY</div>
-              </div>
-            </Link>
-          </section>
-        )}
-
-        {/* 5. STANDEN - AANGEPASTE VERSIE */}
+        {/* 4. STANDEN */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6">
@@ -188,26 +171,15 @@ export default async function HomePage() {
               <div className="w-1 h-5 bg-[#e10600]"></div>
               <h2 className="text-2xl font-black italic uppercase text-white">F1 Leaderboard</h2>
             </div>
-
             <div className="space-y-2">
               {leaderboard && leaderboard.length > 0 ? (
                 leaderboard.map((player, index) => (
-                  <div 
-                    key={player.user_id} 
-                    className={`flex items-center justify-between p-3 rounded-xl border border-white/5 transition-all ${
-                      index === 0 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-black/20"
-                    }`}
-                  >
+                  <div key={player.user_id} className={`flex items-center justify-between p-3 rounded-xl border border-white/5 transition-all ${index === 0 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-black/20"}`}>
                     <div className="flex items-center gap-4">
-                      <span className={`w-6 font-f1 italic font-black text-sm ${
-                        index === 0 ? "text-yellow-500" : 
-                        index === 1 ? "text-slate-300" : 
-                        index === 2 ? "text-orange-400" : "text-slate-600"
-                      }`}>
+                      <span className={`w-6 font-f1 italic font-black text-sm ${index === 0 ? "text-yellow-500" : index === 1 ? "text-slate-300" : index === 2 ? "text-orange-400" : "text-slate-600"}`}>
                         {index + 1}
                       </span>
                       <div>
-                        {/* AANPASSING: Nickname heeft nu prioriteit boven urer_name */}
                         <p className="text-sm font-black uppercase italic leading-none">
                           {player.nickname || player.urer_name || "Anonieme Coureur"}
                         </p>
@@ -220,9 +192,7 @@ export default async function HomePage() {
                   </div>
                 ))
               ) : (
-                <p className="text-center py-8 text-slate-500 text-[10px] uppercase tracking-widest italic">
-                  Nog geen scores bekend
-                </p>
+                <p className="text-center py-8 text-slate-500 text-[10px] uppercase tracking-widest italic">Nog geen scores bekend</p>
               )}
             </div>
           </div>
