@@ -148,10 +148,15 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* 3. KALENDER (DUBBELE TITEL VERWIJDERD) */}
+        {/* 3. KALENDER (GELIJKETROKKEN AAN JAARVOORSPELLING) */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] overflow-hidden">
+            {/* Handmatige Header voor consistentie */}
+            <div className="p-6 pb-0">
+                <h2 className="text-2xl font-black italic uppercase text-white leading-tight">Jaarkalender</h2>
+                <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">Alle races van het 2026 seizoen</p>
+            </div>
             <Suspense fallback={<div className="p-8 text-slate-500 italic uppercase">Laden...</div>}>
               <RaceCalendar />
             </Suspense>
