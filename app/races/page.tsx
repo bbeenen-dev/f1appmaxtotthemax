@@ -101,12 +101,12 @@ export default async function CalendarPage() {
 
                   <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d]">
                     <div className="flex justify-between items-start mb-4">
-                      <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-[10px] tracking-widest leading-none`}>
+                      {/* ROUND INDICATOR NU EEN SLAG GROTER (text-xs) */}
+                      <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-xs tracking-[0.2em] leading-none font-black italic`}>
                         Round {race.round}
                       </span>
                       {isComplete && (
                         <div className="text-green-500">
-                          {/* HET ROBUUSTE VINKJE TOEGEPAST */}
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
