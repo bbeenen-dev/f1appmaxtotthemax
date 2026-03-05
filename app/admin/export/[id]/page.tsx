@@ -4,7 +4,6 @@ import Link from 'next/link';
 export const dynamic = "force-dynamic";
 
 export default async function AdminExportPage(props: any) {
-  // 1. Veilig de parameters ophalen (zoals in de geslaagde test)
   const params = await props.params;
   const searchParams = await props.searchParams;
   
@@ -12,145 +11,80 @@ export default async function AdminExportPage(props: any) {
   const type = searchParams?.type || 'race';
 
   if (!raceId) {
-    return <div className="p-20 text-black bg-white font-sans">Fout: Geen Race ID gevonden.</div>;
+    return <div className="p-20 bg-white text-black">Geen Race ID.</div>;
   }
 
-  try {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    // 2. Race info ophalen
-    const { data: race, error: raceError } = await supabase
-      .from('races')
-      .select('race_name')
-      .eq('id', raceId)
-      .single();
+  // 1. Haal de data op in losse stappen met extra checks
+  const { data: race } = await supabase.from('races').select('race_name').eq('id', raceId).single();
 
-    if (raceError) throw new Error(`Race niet gevonden: ${raceError.message}`);
+  let tableName = 'predictions_race';
+  if (type === 'qualy') tableName = 'predictions_qualifying';
+  if (type === 'sprint') tableName = 'predictions_sprint';
 
-    // 3. Tabel bepalen op basis van type
-    let tableName = 'predictions_race';
-    if (type === 'qualy') tableName = 'predictions_qualifying';
-    if (type === 'sprint') tableName = 'predictions_sprint';
+  const { data: rawPredictions, error: predError } = await supabase
+    .from(tableName)
+    .select('*')
+    .eq('race_id', raceId);
 
-    // 4. Voorspellingen ophalen
-    const { data: rawPredictions, error: predError } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('race_id', raceId);
+  if (predError) return <div className="p-20 bg-white text-red-500">DB Fout: {predError.message}</div>;
 
-    if (predError) throw new Error(`Data fout in ${tableName}: ${predError.message}`);
+  // 2. Haal profielen op
+  const userIds = rawPredictions?.map(p => p.user_id) || [];
+  const { data: profiles } = await supabase.from('profiles').select('id, username').in('id', userIds);
 
-    // 5. Gebruikersnamen ophalen uit de profiles tabel
-    const userIds = rawPredictions?.map(p => p.user_id) || [];
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username')
-      .in('id', userIds);
+  return (
+    <div className="min-h-screen bg-white text-black p-8 font-sans print:p-0">
+      <header className="border-b-4 border-black pb-4 mb-8 flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-black uppercase italic">{race?.race_name || 'Race'}</h1>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{type} OVERZICHT 2026</p>
+        </div>
+        <button onClick={() => window.print()} className="print:hidden bg-black text-white px-6 py-2 rounded-lg font-bold uppercase text-[10px]">
+          Opslaan als PDF
+        </button>
+      </header>
 
-    // 6. Data samenvoegen
-    const predictions = rawPredictions?.map(pred => ({
-      ...pred,
-      username: profiles?.find(p => p.id === pred.user_id)?.username || 'Onbekende Deelnemer'
-    })) || [];
-
-    return (
-      <div className="min-h-screen bg-white text-black p-6 md:p-10 font-sans print:p-0">
-        {/* HEADER */}
-        <header className="border-b-4 border-black pb-4 mb-8 flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-black uppercase italic leading-none">{race?.race_name}</h1>
-            <p className="font-bold text-gray-400 uppercase text-[9px] tracking-widest mt-2">
-              OFFICIAL {type.toUpperCase()} EXPORT • SEASON 2026
-            </p>
-          </div>
-          <div className="flex gap-2 print:hidden">
-            <Link href="/admin" className="bg-gray-100 text-black px-4 py-2 text-[10px] font-black uppercase rounded-lg hover:bg-gray-200 transition-colors">
-              ← Dashboard
-            </Link>
-            <button 
-              onClick={() => window.print()} 
-              className="bg-black text-white px-5 py-2 text-[10px] font-black uppercase rounded-lg shadow-xl active:scale-95 transition-all"
-            >
-              PDF Opslaan / Print
-            </button>
-          </div>
-        </header>
-
-        {/* LIJST MET VOORSPELLINGEN */}
-        <div className="space-y-4">
-          {predictions.length === 0 ? (
-            <div className="p-20 border-2 border-dashed border-gray-100 text-center text-gray-300 italic rounded-3xl">
-              Geen voorspellingen gevonden voor {type}.
-            </div>
-          ) : (
-            predictions.map((pred: any) => {
-              // Bepaal welke coureurs getoond moeten worden per type
-              let displayDrivers: string[] = [];
-              if (type === 'qualy') {
-                displayDrivers = pred.top_3_drivers || [];
-              } else if (type === 'sprint') {
-                displayDrivers = pred.top_8_drivers || [];
-              } else {
-                // Combineer top 10 en bottom 12 voor de volledige race
+      <div className="space-y-6">
+        {rawPredictions?.map((pred: any) => {
+          const username = profiles?.find(p => p.id === pred.user_id)?.username || 'Onbekend';
+          
+          // VEILIGE DATA VERZAMELING
+          let drivers: string[] = [];
+          try {
+            if (type === 'qualy') drivers = Array.isArray(pred.top_3_drivers) ? pred.top_3_drivers : [];
+            else if (type === 'sprint') drivers = Array.isArray(pred.top_8_drivers) ? pred.top_8_drivers : [];
+            else {
                 const t10 = Array.isArray(pred.top_10_drivers) ? pred.top_10_drivers : [];
                 const b12 = Array.isArray(pred.bottom_12_drivers) ? pred.bottom_12_drivers : [];
-                displayDrivers = [...t10, ...b12];
-              }
+                drivers = [...t10, ...b12];
+            }
+          } catch (e) { drivers = []; }
 
-              return (
-                <div key={pred.id} className="border-2 border-black p-4 rounded-xl break-inside-avoid shadow-sm bg-white">
-                  <div className="flex justify-between items-center border-b border-gray-100 mb-3 pb-1">
-                    <span className="font-black uppercase italic text-base tracking-tighter">
-                      {pred.username}
-                    </span>
-                    {type === 'race' && (
-                      <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded italic">
-                        FL: {pred.fastest_lap_driver || 'N/A'}
-                      </span>
-                    )}
+          return (
+            <div key={pred.id} className="border-2 border-black p-4 rounded-xl break-inside-avoid">
+              <div className="flex justify-between border-b mb-3 pb-1 border-gray-100">
+                <span className="font-black uppercase italic">{username}</span>
+                {type === 'race' && <span className="text-[10px] font-bold italic">FL: {pred.fastest_lap_driver || '-'}</span>}
+              </div>
+              
+              <div className="flex flex-wrap gap-1">
+                {drivers.length > 0 ? drivers.map((d, i) => (
+                  <div key={i} className="border border-gray-100 bg-gray-50 px-2 py-1 rounded flex flex-col items-center min-w-[45px]">
+                    <span className="text-[6px] text-gray-400 font-bold">P{i+1}</span>
+                    <span className="text-[9px] font-black uppercase">{d || '?'}</span>
                   </div>
-                  
-                  {/* Grid layout: 11 kolommen breed voor een compact overzicht */}
-                  <div className="grid grid-cols-11 gap-1">
-                    {displayDrivers.map((driver, idx) => (
-                      <div key={idx} className="flex flex-col items-center border border-gray-50 py-1.5 bg-gray-50/30 rounded">
-                        <span className="text-[6px] text-gray-400 font-bold uppercase leading-none mb-0.5">P{idx + 1}</span>
-                        <span className="text-[10px] font-black leading-none">{driver}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <footer className="mt-12 text-[7px] text-gray-300 uppercase font-black text-center border-t border-gray-100 pt-6 tracking-[0.2em]">
-            F1 Poule Admin Tool • Generated {new Date().toLocaleDateString()}
-        </footer>
-
-        {/* CSS voor print optimalisatie */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          @media print {
-            body { background: white; padding: 0; }
-            .print\\:hidden { display: none; }
-            @page { margin: 1cm; size: A4; }
-            .shadow-sm { shadow: none; }
-          }
-        `}} />
+                )) : <span className="text-[10px] text-red-500 italic">Geen coureurs ingevuld</span>}
+              </div>
+            </div>
+          );
+        })}
       </div>
-    );
-  } catch (err: any) {
-    return (
-      <div className="min-h-screen bg-white p-20 flex flex-col items-center justify-center text-center font-sans">
-        <h2 className="text-red-600 font-black uppercase italic text-3xl mb-4">Data Fout</h2>
-        <div className="bg-red-50 p-6 rounded-2xl border border-red-100 max-w-md">
-          <p className="text-xs text-red-800 font-mono break-words">{err.message}</p>
-        </div>
-        <Link href="/admin" className="text-black font-black uppercase italic text-sm mt-8 underline decoration-red-500">
-          Terug naar Admin
-        </Link>
+
+      <div className="mt-8 print:hidden">
+        <Link href="/admin" className="text-gray-400 text-[10px] font-bold uppercase underline">← Terug naar dashboard</Link>
       </div>
-    );
-  }
+    </div>
+  );
 }
