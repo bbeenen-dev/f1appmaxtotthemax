@@ -11,7 +11,7 @@ interface RaceData {
   race_name: string;
   city_name: string;
   sprint_race_start: string | null;
-  qualy_start: string | null;
+  qualifying_start: string | null; // Gecorrigeerd
   race_start: string | null;
   round: number;
 }
@@ -47,12 +47,10 @@ export default function RaceCardPage({ params }: PageProps) {
   const [dbError, setDbError] = useState<string | null>(null);
   const [status, setStatus] = useState<PredictionStatus>({ qualy: false, sprint: false, race: false });
   
-  // Grid States
   const [activeTab, setActiveTab] = useState<'qualy' | 'sprint' | 'race'>('race');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
 
-  // Timer om de 'lock' status live bij te werken
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
@@ -65,17 +63,16 @@ export default function RaceCardPage({ params }: PageProps) {
       try {
         setLoading(true);
         
-        // 1. Race info inclusief alle starttijden
+        // 1. Race info met de juiste kolomnamen
         const { data: raceData, error: raceError } = await supabase
           .from('races')
-          .select('id, race_name, city_name, sprint_race_start, qualy_start, race_start, round')
+          .select('id, race_name, city_name, sprint_race_start, qualifying_start, race_start, round')
           .eq('id', raceId)
           .single();
 
         if (raceError) throw raceError;
         if (isMounted) setRace(raceData);
 
-        // 2. Eigen voorspellingsstatus
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && isMounted) {
           const [q, s, r] = await Promise.all([
@@ -86,7 +83,6 @@ export default function RaceCardPage({ params }: PageProps) {
           setStatus({ qualy: !!q.data, sprint: !!s.data, race: !!r.data });
         }
 
-        // 3. Grid Data ophalen voor het actieve tabblad
         const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
         const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
         
@@ -113,10 +109,10 @@ export default function RaceCardPage({ params }: PageProps) {
     return () => { isMounted = false; };
   }, [raceId, activeTab, supabase]);
 
-  // Lock helper
+  // Lock helper met de gecorrigeerde qualifying_start
   const isLocked = (tab: 'qualy' | 'sprint' | 'race') => {
     if (!race) return true;
-    const startTime = tab === 'qualy' ? race.qualy_start : tab === 'sprint' ? race.sprint_race_start : race.race_start;
+    const startTime = tab === 'qualy' ? race.qualifying_start : tab === 'sprint' ? race.sprint_race_start : race.race_start;
     if (!startTime) return true;
     return new Date(startTime) > now;
   };
@@ -132,47 +128,37 @@ export default function RaceCardPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
       <div className="max-w-2xl mx-auto">
-        
-        <Link href="/races" className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-8 tracking-[0.2em] hover:text-[#e10600] transition-colors">
+        <Link href="/races" className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-8 tracking-[0.2em] hover:text-[#e10600]">
           <span className="text-lg transition-transform group-hover:-translate-x-1">←</span> Kalender
         </Link>
 
-        <header className="mb-12 relative">
+        <header className="mb-12">
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase tracking-tighter">Round {race?.round}</span>
             <div className="h-[2px] flex-grow bg-slate-800/50"></div>
           </div>
-          <h1 className="text-5xl md:text-6xl font-f1 font-black italic uppercase text-white leading-none tracking-tighter">
+          <h1 className="text-5xl md:text-6xl font-f1 font-black italic uppercase text-white leading-none tracking-tighter italic">
             {race?.race_name}
           </h1>
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {dbError && (
-          <div className="mb-6 p-4 bg-red-900/10 border border-red-900/50 rounded-xl text-red-500 text-[10px] font-f1 uppercase tracking-widest italic text-center">
-            {dbError}
-          </div>
-        )}
-
         <div className="grid gap-6">
           {race?.sprint_race_start && (
-            <PredictionCard title="Sprint Race" subtitle="Short Burst Points • Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
+            <PredictionCard title="Sprint Race" subtitle="Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
           )}
-
-          <PredictionCard title="Qualifying" subtitle="Top 3 Shootout" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-
-          <PredictionCard title="Grand Prix" subtitle="Main Event • Top 10 + FL" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-
+          <PredictionCard title="Qualifying" subtitle="Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
+          <PredictionCard title="Grand Prix" subtitle="Top 10 + FL" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
+          
           <div className="h-[1px] w-full bg-slate-800/50 my-4" />
+          <LiveCard title="Live Tracker" subtitle="Real-time Updates" href={`/races/${raceId}/live`} accentColor="#005AFF" />
 
-          <LiveCard title="Live Tracker" subtitle="Virtual Standing • Real-time Updates" href={`/races/${raceId}/live`} accentColor="#005AFF" />
-
-          {/* --- GRID OVERVIEW SECTIE --- */}
+          {/* GRID OVERVIEW */}
           <section className="mt-12 bg-[#161a23] rounded-3xl p-6 border border-slate-800/50 shadow-2xl relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-xl font-f1 font-black italic uppercase tracking-tighter text-white">The Grid</h2>
-                <p className="text-[8px] text-slate-500 font-f1 uppercase tracking-widest italic">Compare predictions</p>
+                <p className="text-[8px] text-slate-500 font-f1 uppercase tracking-widest italic tracking-tighter">Vergelijk voorspellingen</p>
               </div>
               <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
                 {(['qualy', 'sprint', 'race'] as const).map((t) => (
@@ -193,8 +179,8 @@ export default function RaceCardPage({ params }: PageProps) {
             {isLocked(activeTab) ? (
               <div className="py-16 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-2xl bg-[#0f111a]/50">
                 <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-xl">🔒</div>
-                <h3 className="text-[10px] font-f1 font-black uppercase italic text-slate-400 tracking-widest">Data is classified</h3>
-                <p className="text-[8px] font-f1 text-slate-600 uppercase mt-2">Openbaar zodra de {activeTab} begint</p>
+                <h3 className="text-[10px] font-f1 font-black uppercase italic text-slate-400 tracking-widest italic">Data is classified</h3>
+                <p className="text-[8px] font-f1 text-slate-600 uppercase mt-2">Zichtbaar zodra de {activeTab} begint</p>
               </div>
             ) : (
               <div className="relative overflow-x-auto scrollbar-hide -mx-2">
@@ -211,34 +197,34 @@ export default function RaceCardPage({ params }: PageProps) {
                   <tbody className="divide-y divide-slate-800/30">
                     {gridData.length > 0 ? gridData.map((row) => (
                       <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
-                        <td className="sticky left-0 z-20 bg-[#161a23] px-4 py-5 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/50 shadow-[10px_0_15px_-5px_rgba(0,0,0,0.5)] group-hover:text-[#e10600] transition-colors">
+                        <td className="sticky left-0 z-20 bg-[#161a23] px-4 py-5 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/50 shadow-[10px_0_15px_-5px_rgba(0,0,0,0.5)] group-hover:text-[#e10600]">
                           {row.nickname}
                         </td>
                         {row.drivers.map((d, i) => (
-                          <td key={i} className="px-3 py-5 text-[10px] font-f1 font-bold text-center uppercase text-slate-400 whitespace-nowrap">
+                          <td key={i} className="px-3 py-5 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">
                             {d || '-'}
                           </td>
                         ))}
                         {activeTab === 'race' && (
-                          <td className="px-3 py-5 text-[10px] font-f1 font-bold text-center uppercase text-blue-400 font-mono">
+                          <td className="px-3 py-5 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">
                             {row.fastest_lap || '-'}
                           </td>
                         )}
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={15} className="py-12 text-center text-[10px] text-slate-500 uppercase font-f1 italic">Nog geen data beschikbaar</td>
+                        <td colSpan={15} className="py-12 text-center text-[10px] text-slate-500 uppercase font-f1 italic">Geen data beschikbaar</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
             )}
-
+            
             {!isLocked(activeTab) && (
               <div className="mt-6 flex items-center justify-center gap-3">
                 <div className="h-[1px] w-8 bg-slate-800" />
-                <span className="text-[8px] font-f1 text-slate-500 uppercase tracking-widest italic animate-pulse">Scroll or swipe to see full grid →</span>
+                <span className="text-[8px] font-f1 text-slate-500 uppercase tracking-widest italic animate-pulse">Swipe to explore →</span>
                 <div className="h-[1px] w-8 bg-slate-800" />
               </div>
             )}
@@ -249,7 +235,7 @@ export default function RaceCardPage({ params }: PageProps) {
   );
 }
 
-// Sub-components
+// PredictionCard & LiveCard components (zoals eerder)
 function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
