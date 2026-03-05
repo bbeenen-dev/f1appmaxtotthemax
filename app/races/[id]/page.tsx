@@ -47,7 +47,6 @@ export default function RaceCardPage({ params }: PageProps) {
   const [dbError, setDbError] = useState<string | null>(null);
   const [status, setStatus] = useState<PredictionStatus>({ qualy: false, sprint: false, race: false });
   
-  // Grid States - Volgorde aangepast naar Sprint als standaard indien aanwezig
   const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
@@ -57,22 +56,24 @@ export default function RaceCardPage({ params }: PageProps) {
     return () => clearInterval(timer);
   }, []);
 
+  // 1. Haal race info en eigen status op (slechts één keer bij laden)
   useEffect(() => {
     let isMounted = true;
-    async function getData() {
+    async function getInitialData() {
       if (!raceId || String(raceId).includes('%')) return;
       try {
-        setLoading(true);
-        const { data: raceData, error: raceError } = await supabase
+        const { data: raceData } = await supabase
           .from('races')
           .select('id, race_name, city_name, sprint_race_start, qualifying_start, race_start, round')
           .eq('id', raceId)
           .single();
 
-        if (raceError) throw raceError;
-        if (isMounted) {
+        if (isMounted && raceData) {
           setRace(raceData);
-          if (raceData.sprint_race_start) setActiveTab('sprint');
+          // Alleen de tab op sprint zetten als die er is EN we nog op de standaard (qualy) staan
+          if (raceData.sprint_race_start) {
+            setActiveTab('sprint');
+          }
         }
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -84,7 +85,22 @@ export default function RaceCardPage({ params }: PageProps) {
           ]);
           setStatus({ qualy: !!q.data, sprint: !!s.data, race: !!r.data });
         }
+      } catch (err: any) {
+        if (isMounted) setDbError(err.message);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    getInitialData();
+    return () => { isMounted = false; };
+  }, [raceId, supabase]);
 
+  // 2. Haal grid data op (telkens als de tab verandert)
+  useEffect(() => {
+    let isMounted = true;
+    async function getGridData() {
+      if (!raceId) return;
+      try {
         const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
         const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
         
@@ -100,15 +116,11 @@ export default function RaceCardPage({ params }: PageProps) {
           }));
           if (isMounted) setGridData(formattedGrid);
         }
-      } catch (err: any) {
-        if (isMounted) setDbError(err.message || "Er ging iets mis.");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+      } catch (e) {}
     }
-    getData();
+    getGridData();
     return () => { isMounted = false; };
-  }, [raceId, activeTab, supabase]);
+  }, [activeTab, raceId, supabase]);
 
   const isLocked = (tab: 'sprint' | 'qualy' | 'race') => {
     if (!race) return true;
@@ -119,7 +131,7 @@ export default function RaceCardPage({ params }: PageProps) {
 
   if (loading) return (
     <div className="min-h-screen bg-[#0f111a] flex items-center justify-center">
-      <div className="text-[#e10600] font-f1 font-black italic animate-pulse text-2xl tracking-widest uppercase">Loading...</div>
+      <div className="text-[#e10600] font-f1 font-black italic animate-pulse text-2xl tracking-widest uppercase text-center">Loading...</div>
     </div>
   );
 
@@ -140,27 +152,19 @@ export default function RaceCardPage({ params }: PageProps) {
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {dbError && <div className="mb-6 p-4 bg-red-900/10 border border-red-900/50 rounded-xl text-red-500 text-[10px] font-f1 uppercase tracking-widest italic text-center">{dbError}</div>}
-
-        {/* COMPACTE GRID VAN KAARTEN (Geen scheidingslijnen meer) */}
         <div className="grid gap-4 mb-4">
           {race?.sprint_race_start && (
-            <PredictionCard title="Sprint Race" subtitle="Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
+            <PredictionCard title="Sprint Race" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
           )}
-          <PredictionCard title="Qualifying" subtitle="Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Grand Prix" subtitle="Top 10 + FL" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-          <LiveCard title="Live Tracker" subtitle="Real-time Updates" href={`/races/${raceId}/live`} accentColor="#005AFF" />
+          <PredictionCard title="Qualifying" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
+          <PredictionCard title="Grand Prix" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
+          <LiveCard title="Live Tracker" href={`/races/${raceId}/live`} accentColor="#005AFF" />
         </div>
 
-        {/* --- VOORSPELLINGEN SECTIE (Breder en compacter) --- */}
         <section className="mt-8 bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 shadow-2xl relative w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-xl font-f1 font-black italic uppercase tracking-tighter text-white">Voorspellingen</h2>
-              <p className="text-[8px] text-slate-500 font-f1 uppercase tracking-widest italic tracking-tighter">Iedereen op de grid</p>
-            </div>
+            <h2 className="text-xl font-f1 font-black italic uppercase tracking-tighter text-white">Voorspellingen</h2>
             
-            {/* VOLGORDE AANGEPAST: SPRINT -> QUALY -> RACE & GROTERE TEKST */}
             <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
               {(['sprint', 'qualy', 'race'] as const).map((t) => (
                 (t !== 'sprint' || race?.sprint_race_start) && (
@@ -179,8 +183,10 @@ export default function RaceCardPage({ params }: PageProps) {
 
           {isLocked(activeTab) ? (
             <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
-              <div className="text-xl mb-2 opacity-30 text-slate-400">🔒</div>
-              <h3 className="text-[10px] font-f1 font-black uppercase italic text-slate-500 tracking-widest">Geheim tot start sessie</h3>
+              <div className="text-2xl mb-2 opacity-30 text-slate-400">🔒</div>
+              <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 tracking-widest text-center px-4">
+                Beschikbaar vanaf start sessie
+              </h3>
             </div>
           ) : (
             <div className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
@@ -195,33 +201,21 @@ export default function RaceCardPage({ params }: PageProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/20">
-                  {gridData.length > 0 ? gridData.map((row) => (
+                  {gridData.map((row) => (
                     <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
                       <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
                         {row.nickname}
                       </td>
                       {row.drivers.map((d, i) => (
-                        <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">
-                          {d || '-'}
-                        </td>
+                        <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">{d || '-'}</td>
                       ))}
                       {activeTab === 'race' && (
-                        <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">
-                          {row.fastest_lap || '-'}
-                        </td>
+                        <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>
                       )}
                     </tr>
-                  )) : (
-                    <tr><td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 uppercase font-f1 italic">Nog geen voorspellingen</td></tr>
-                  )}
+                  ))}
                 </tbody>
               </table>
-            </div>
-          )}
-          
-          {!isLocked(activeTab) && (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <span className="text-[8px] font-f1 text-slate-600 uppercase tracking-tighter italic animate-pulse">Swipe links/rechts voor de hele grid →</span>
             </div>
           )}
         </section>
@@ -230,53 +224,38 @@ export default function RaceCardPage({ params }: PageProps) {
   );
 }
 
-// PredictionCard & LiveCard components blijven ongewijzigd qua logica, maar met strakkere padding
-function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
+function LiveCard({ title, href, accentColor }: { title: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
         <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
         <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
           <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
-              <div className="flex items-center gap-2">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
-                <p className="text-slate-500 text-[8px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-              </div>
-            </div>
+            <h2 className="text-xl font-f1 font-black italic uppercase leading-none text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
             <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
           </div>
-          <div className="absolute bottom-0 left-5 right-5 h-[1px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100" style={{ backgroundColor: accentColor }} />
         </div>
       </div>
     </Link>
   );
 }
 
-function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
+function PredictionCard({ title, href, isDone, accentColor }: { title: string, href: string, isDone: boolean, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
         <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40 transition-opacity duration-500" />
         <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
           <div className="flex justify-between items-center">
-            <div>
-              <h2 className={`text-xl font-f1 font-black italic uppercase leading-none mb-1 transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-              <p className="text-slate-500 text-[8px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-            </div>
+            <h2 className={`text-xl font-f1 font-black italic uppercase leading-none transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
             {isDone ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-f1 text-[9px] text-green-500 font-bold italic uppercase">Ready</span>
-                <div className="text-green-500">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                </div>
+              <div className="text-green-500">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
             ) : (
               <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
             )}
           </div>
-          <div className={`absolute bottom-0 left-5 right-5 h-[1px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
         </div>
       </div>
     </Link>
