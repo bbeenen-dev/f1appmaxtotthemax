@@ -34,7 +34,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
   const [race, setRace] = useState<RaceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isChangingTab, setIsChangingTab] = useState(false); // Voor de visuele refresh
+  const [isChangingTab, setIsChangingTab] = useState(false);
   const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
   const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
@@ -45,7 +45,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
     return () => clearInterval(timer);
   }, []);
 
-  // 1. Initial Load
   useEffect(() => {
     async function getInitialData() {
       const { data: raceData } = await supabase
@@ -73,17 +72,15 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
     getInitialData();
   }, [raceId, supabase]);
 
-  // 2. Fetch Grid Data met visuele refresh
   useEffect(() => {
     async function fetchGrid() {
-      setIsChangingTab(true); // Start "verversing" animatie
-      
+      setIsChangingTab(true);
       const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
       const isStarted = startTime && new Date(startTime) <= now;
 
       if (!isStarted) {
         setGridData([]);
-        setTimeout(() => setIsChangingTab(false), 300); // Korte delay voor gevoel
+        setTimeout(() => setIsChangingTab(false), 300);
         return;
       }
 
@@ -102,8 +99,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
         }));
         setGridData(formatted);
       }
-      
-      // Stop de "loading" state van de tab
       setTimeout(() => setIsChangingTab(false), 400);
     }
     if (race) fetchGrid();
@@ -120,20 +115,23 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 pb-32 overflow-x-hidden">
       <div className="max-w-2xl mx-auto">
-        
         <header className="mb-8">
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Round {race?.round}</span>
             <div className="h-[2px] flex-grow bg-slate-800/50"></div>
           </div>
           <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight italic">{race?.race_name}</h1>
+          <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
         <div className="grid gap-4 mb-8">
-          {race?.sprint_race_start && <PredictionCard title="Sprint Race" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />}
-          <PredictionCard title="Qualifying" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Grand Prix" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-          <LiveCard title="Live Tracker" href={`/races/${raceId}/live`} accentColor="#005AFF" />
+          {race?.sprint_race_start && (
+            <PredictionCard title="Sprint Race" subtitle="Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
+          )}
+          <PredictionCard title="Qualifying" subtitle="Top 3 Shootout" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
+          <PredictionCard title="Grand Prix" subtitle="Main Event • Top 10 + FL" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
+          
+          <LiveCard title="Live Tracker" subtitle="Virtual Standing • Real-time" href={`/races/${raceId}/live`} accentColor="#005AFF" />
         </div>
 
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
@@ -145,7 +143,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                   <button
                     key={t}
                     onClick={() => setActiveTab(t)}
-                    className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg scale-105' : 'text-slate-500 hover:text-white'}`}
                   >
                     {isLocked(t) && <span>🔒</span>} {t}
                   </button>
@@ -175,7 +173,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                   <tbody className="divide-y divide-slate-800/20">
                     {gridData.length > 0 ? gridData.map((row) => (
                       <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
-                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">
+                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
                           {row.nickname}
                         </td>
                         {row.drivers.map((d, i) => (
@@ -197,25 +195,21 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   );
 }
 
-// PredictionCard met het originele SVG vinkje
-function PredictionCard({ title, href, isDone, accentColor }: { title: string, href: string, isDone: boolean, accentColor: string }) {
+function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40" />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)]">
+        <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
+        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
           <div className="flex justify-between items-center">
-            <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-            {isDone ? (
-              <div className="text-green-500">
-                {/* DIT IS HET OUDE VERTROUWDE VINKJE */}
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
+            <div>
+              <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
+              <div className="flex items-center gap-2">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
+                <p className="text-slate-500 text-[8px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
               </div>
-            ) : (
-              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-            )}
+            </div>
+            <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
           </div>
         </div>
       </div>
@@ -223,14 +217,26 @@ function PredictionCard({ title, href, isDone, accentColor }: { title: string, h
   );
 }
 
-function LiveCard({ title, href, accentColor }: { title: string, href: string, accentColor: string }) {
+function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
       <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)]">
-          <div className="flex justify-between items-center text-xl font-f1 font-black italic uppercase text-white group-hover:text-[#005AFF]">
-            {title} <span>→</span>
+        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40 transition-opacity duration-500" />
+        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
+              <p className="text-slate-500 text-[8px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+            </div>
+            {isDone ? (
+              <div className="text-green-500">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
+              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+            )}
           </div>
         </div>
       </div>
