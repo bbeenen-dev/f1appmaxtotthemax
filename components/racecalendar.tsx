@@ -8,14 +8,14 @@ export default function RaceCalendar() {
         className="group flex items-center p-6 w-full"
       >
         <div className="flex flex-col">
-          {/* Alleen de kerntitel in de vette F1-stijl */}
-          <h2 className="font-f1 text-2xl md:text-3xl font-black italic uppercase leading-none tracking-tighter text-white group-hover:text-[#e10600] transition-colors">
+          {/* Titel: Nu exact hetzelfde font en grootte als Jaarvoorspelling (text-2xl) */}
+          <h2 className="text-2xl font-black italic uppercase text-white leading-tight group-hover:text-[#e10600] transition-colors">
             Jaarkalender
           </h2>
           
-          {/* Subtiele indicatie van de inhoud zonder de extra knop */}
-          <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.3em] mt-2 opacity-60">
-            24 Grands Prix • Bekijk alles
+          {/* Subtekst: Nu text-slate-400, text-xs en dezelfde vette F1-stijl */}
+          <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic mt-1">
+            Alle races van het 2026 seizoen
           </p>
         </div>
       </Link>
