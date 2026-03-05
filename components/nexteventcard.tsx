@@ -58,29 +58,31 @@ export default async function NextEventCard() {
       className="relative p-6 h-full min-h-[160px] flex flex-col justify-between overflow-hidden group/card"
     >
       <div className="flex justify-between items-start mb-2">
-        <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-[#e10600]'} uppercase text-[10px] tracking-[0.2em]`}>
+        {/* AANGEPAST: Round indicator stijl consistent met CalendarPage */}
+        <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-[#e10600]'} uppercase text-xs tracking-[0.2em] font-black italic`}>
           Round {race.round} • Next Event
         </span>
+        
         {isComplete && (
-          <div className="bg-green-500/20 text-green-500 p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          <div className="text-green-500">
+            {/* HET ROBUUSTE VINKJE TOEGEPAST */}
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         )}
       </div>
 
       <div className="relative z-10">
-        <h2 className="font-f1 text-3xl md:text-4xl font-black italic uppercase leading-none tracking-tighter mb-1 group-hover/card:text-[#e10600] transition-colors">
+        <h2 className="font-f1 text-3xl md:text-4xl font-black italic uppercase leading-none tracking-tighter mb-1 group-hover/card:text-[#e10600] transition-colors text-white">
           {race.race_name}
         </h2>
         <div className="flex items-center gap-2">
-          <p className="text-slate-300 font-bold uppercase text-xs tracking-widest italic">
+          <p className="text-slate-300 font-bold uppercase text-xs tracking-widest italic font-f1">
             {race.city_name}
           </p>
           <span className="text-slate-700">•</span>
-          {/* AANGEPAST: text-xs naar text-sm en slate-500 naar slate-400 voor betere zichtbaarheid */}
-          <p className="text-slate-400 text-sm font-bold uppercase italic">
+          <p className="text-slate-400 text-sm font-bold uppercase italic font-f1">
             {formatDateRange(race.fp1_start, race.race_start)}
           </p>
         </div>
@@ -89,17 +91,17 @@ export default async function NextEventCard() {
       <div className="flex gap-3 mt-6 relative z-10">
         <div className="flex flex-col gap-1">
           <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
-          <div className={`h-1.5 w-12 rounded-full transition-colors ${hasQualy ? 'bg-green-500' : 'bg-slate-800'}`} />
+          <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
         </div>
         {needsSprint && (
           <div className="flex flex-col gap-1">
             <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter">Sprint</span>
-            <div className={`h-1.5 w-12 rounded-full transition-colors ${hasSprint ? 'bg-green-500' : 'bg-slate-800'}`} />
+            <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
           </div>
         )}
         <div className="flex flex-col gap-1">
           <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter">Race</span>
-          <div className={`h-1.5 w-12 rounded-full transition-colors ${hasRace ? 'bg-green-500' : 'bg-slate-800'}`} />
+          <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
         </div>
       </div>
 
