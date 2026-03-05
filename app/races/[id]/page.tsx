@@ -126,12 +126,12 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
         <div className="grid gap-4 mb-8">
           {race?.sprint_race_start && (
-            <PredictionCard title="Sprint Race" subtitle="Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
+            <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
           )}
-          <PredictionCard title="Qualifying" subtitle="Top 3 Shootout" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Grand Prix" subtitle="Main Event • Top 10 + FL" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
+          <PredictionCard title="Qualifying" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
+          <PredictionCard title="Grand Prix" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
           
-          <LiveCard title="Live Tracker" subtitle="Virtual Standing • Real-time" href={`/races/${raceId}/live`} accentColor="#005AFF" />
+          <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtual Standing" href={`/races/${raceId}/live`} accentColor="#005AFF" />
         </div>
 
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
@@ -206,7 +206,7 @@ function LiveCard({ title, subtitle, href, accentColor }: { title: string, subti
               <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
               <div className="flex items-center gap-2">
                 <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
-                <p className="text-slate-500 text-[8px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+                <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
               </div>
             </div>
             <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
@@ -226,7 +226,7 @@ function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title:
           <div className="flex justify-between items-center">
             <div>
               <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-              <p className="text-slate-500 text-[8px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+              <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
             </div>
             {isDone ? (
               <div className="text-green-500">
