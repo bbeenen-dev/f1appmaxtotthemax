@@ -34,18 +34,18 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
   const [race, setRace] = useState<RaceData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isChangingTab, setIsChangingTab] = useState(false); // Voor de visuele refresh
   const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
   const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
 
-  // Timer voor live-updates van de starttijden
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 10000);
     return () => clearInterval(timer);
   }, []);
 
-  // 1. EERSTE LOAD: Race info en eigen status
+  // 1. Initial Load
   useEffect(() => {
     async function getInitialData() {
       const { data: raceData } = await supabase
@@ -73,23 +73,24 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
     getInitialData();
   }, [raceId, supabase]);
 
-  // 2. GRID UPDATE: Haal data op zodra de tab wijzigt
+  // 2. Fetch Grid Data met visuele refresh
   useEffect(() => {
     async function fetchGrid() {
-      // Reset data direct voor visuele feedback van 'verversen'
-      setGridData([]);
+      setIsChangingTab(true); // Start "verversing" animatie
       
-      // Check of dit event al gestart is
       const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
       const isStarted = startTime && new Date(startTime) <= now;
 
-      if (!isStarted) return; // Stop als het event nog niet gestart is
+      if (!isStarted) {
+        setGridData([]);
+        setTimeout(() => setIsChangingTab(false), 300); // Korte delay voor gevoel
+        return;
+      }
 
       const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
-      
       const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
       
-      if (preds && preds.length > 0) {
+      if (preds) {
         const userIds = preds.map(p => p.user_id);
         const { data: profiles } = await supabase.from('profiles').select('id, nickname').in('id', userIds);
         
@@ -101,6 +102,9 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
         }));
         setGridData(formatted);
       }
+      
+      // Stop de "loading" state van de tab
+      setTimeout(() => setIsChangingTab(false), 400);
     }
     if (race) fetchGrid();
   }, [activeTab, race, raceId, supabase, now]);
@@ -122,10 +126,9 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
             <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Round {race?.round}</span>
             <div className="h-[2px] flex-grow bg-slate-800/50"></div>
           </div>
-          <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight">{race?.race_name}</h1>
+          <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight italic">{race?.race_name}</h1>
         </header>
 
-        {/* KAARTEN BOVENAAN */}
         <div className="grid gap-4 mb-8">
           {race?.sprint_race_start && <PredictionCard title="Sprint Race" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />}
           <PredictionCard title="Qualifying" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
@@ -133,18 +136,16 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <LiveCard title="Live Tracker" href={`/races/${raceId}/live`} accentColor="#005AFF" />
         </div>
 
-        {/* VOORSPELLINGEN SECTIE */}
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <h2 className="text-xl font-f1 font-black italic uppercase text-white">Voorspellingen</h2>
-            
             <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
               {(['sprint', 'qualy', 'race'] as const).map((t) => (
                 (t !== 'sprint' || race?.sprint_race_start) && (
                   <button
                     key={t}
                     onClick={() => setActiveTab(t)}
-                    className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white' : 'text-slate-500 hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
                   >
                     {isLocked(t) && <span>🔒</span>} {t}
                   </button>
@@ -153,48 +154,75 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
 
-          {isLocked(activeTab) ? (
-            <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
-              <span className="text-2xl mb-2 opacity-30">🔒</span>
-              <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center">Beschikbaar vanaf start sessie</h3>
-            </div>
-          ) : (
-            <div className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800">
-                    <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-3 text-[9px] font-f1 uppercase text-slate-500 min-w-[110px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
-                    {gridData[0]?.drivers.map((_, i) => (
-                      <th key={i} className="px-3 py-3 text-[9px] font-f1 uppercase text-[#e10600] text-center min-w-[65px]">P{i+1}</th>
-                    ))}
-                    {activeTab === 'race' && <th className="px-3 py-3 text-[9px] font-f1 uppercase text-blue-500 text-center min-w-[65px]">F-Lap</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/20">
-                  {gridData.length > 0 ? gridData.map((row) => (
-                    <tr key={row.user_id} className="group">
-                      <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">
-                        {row.nickname}
-                      </td>
-                      {row.drivers.map((d, i) => (
-                        <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">{d || '-'}</td>
+          <div className={`transition-opacity duration-200 ${isChangingTab ? 'opacity-0' : 'opacity-100'}`}>
+            {isLocked(activeTab) ? (
+              <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
+                <span className="text-2xl mb-2 opacity-30">🔒</span>
+                <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center px-4">Beschikbaar vanaf start sessie</h3>
+              </div>
+            ) : (
+              <div key={activeTab} className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800">
+                      <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-3 text-[9px] font-f1 uppercase text-slate-500 min-w-[110px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
+                      {gridData[0]?.drivers.map((_, i) => (
+                        <th key={i} className="px-3 py-3 text-[9px] font-f1 uppercase text-[#e10600] text-center min-w-[65px]">P{i+1}</th>
                       ))}
-                      {activeTab === 'race' && <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>}
+                      {activeTab === 'race' && <th className="px-3 py-3 text-[9px] font-f1 uppercase text-blue-500 text-center min-w-[65px]">F-Lap</th>}
                     </tr>
-                  )) : (
-                    <tr><td colSpan={15} className="py-10 text-center text-[10px] font-f1 italic text-slate-500 animate-pulse">LADEN...</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/20">
+                    {gridData.length > 0 ? gridData.map((row) => (
+                      <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
+                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">
+                          {row.nickname}
+                        </td>
+                        {row.drivers.map((d, i) => (
+                          <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">{d || '-'}</td>
+                        ))}
+                        {activeTab === 'race' && <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>}
+                      </tr>
+                    )) : (
+                      <tr><td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic">Laden...</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </div>
   );
 }
 
-// Hulpsubcomponents (vereenvoudigd conform verzoek)
+// PredictionCard met het originele SVG vinkje
+function PredictionCard({ title, href, isDone, accentColor }: { title: string, href: string, isDone: boolean, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40" />
+        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)]">
+          <div className="flex justify-between items-center">
+            <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
+            {isDone ? (
+              <div className="text-green-500">
+                {/* DIT IS HET OUDE VERTROUWDE VINKJE */}
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
+              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function LiveCard({ title, href, accentColor }: { title: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
@@ -203,22 +231,6 @@ function LiveCard({ title, href, accentColor }: { title: string, href: string, a
         <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)]">
           <div className="flex justify-between items-center text-xl font-f1 font-black italic uppercase text-white group-hover:text-[#005AFF]">
             {title} <span>→</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function PredictionCard({ title, href, isDone, accentColor }: { title: string, href: string, isDone: boolean, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40" />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)]">
-          <div className="flex justify-between items-center">
-            <h2 className={`text-xl font-f1 font-black italic uppercase ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-            {isDone ? <span className="text-green-500 text-xl">✓</span> : <span className="text-[#e10600] text-xl opacity-0 group-hover:opacity-100 transition-all">→</span>}
           </div>
         </div>
       </div>
