@@ -22,72 +22,77 @@ export default async function AdminExportPage(props: any) {
   );
 
   try {
+    // 1. Haal de data op
     const { data: race } = await supabase.from('races').select('race_name').eq('id', raceId).single();
-    const tableName = type === 'qualy' ? 'predictions_qualifying' : type === 'sprint' ? 'predictions_sprint' : 'predictions_race';
     
-    const { data: rawPredictions, error: predError } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('race_id', raceId);
-
-    if (predError) throw new Error(predError.message);
+    const tableName = type === 'qualy' ? 'predictions_qualifying' : type === 'sprint' ? 'predictions_sprint' : 'predictions_race';
+    const { data: rawPredictions } = await supabase.from(tableName).select('*').eq('race_id', raceId);
 
     const userIds = rawPredictions?.map(p => p.user_id) || [];
     const { data: profiles } = await supabase.from('profiles').select('id, username').in('id', userIds);
 
+    // 2. Data voorbereiden (zuiveren van vreemde objecten)
+    const cleanPredictions = rawPredictions?.map(pred => {
+      const profile = profiles?.find(p => p.id === pred.user_id);
+      
+      // Bepaal de lijst met coureurs
+      let drivers: string[] = [];
+      if (type === 'qualy') drivers = Array.isArray(pred.top_3_drivers) ? pred.top_3_drivers : [];
+      else if (type === 'sprint') drivers = Array.isArray(pred.top_8_drivers) ? pred.top_8_drivers : [];
+      else {
+        const t10 = Array.isArray(pred.top_10_drivers) ? pred.top_10_drivers : [];
+        const b12 = Array.isArray(pred.bottom_12_drivers) ? pred.bottom_12_drivers : [];
+        drivers = [...t10, ...b12];
+      }
+
+      return {
+        id: String(pred.id),
+        username: String(profile?.username || 'Onbekend'),
+        updated: pred.updated_at ? new Date(pred.updated_at).toLocaleTimeString('nl-NL') : '-',
+        drivers: drivers.map(d => String(d || '-')),
+        fastest_lap: pred.fastest_lap_driver ? String(pred.fastest_lap_driver) : null
+      };
+    }) || [];
+
     return (
-      <div className="min-h-screen bg-white text-black p-10 font-sans print:p-0">
-        <header className="border-b-4 border-black pb-4 mb-8 flex justify-between items-end">
-          <h1 className="text-2xl font-black uppercase italic">{race?.race_name || 'RACE'} - {type.toUpperCase()}</h1>
-          <button onClick={() => window.print()} className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase print:hidden">Print</button>
+      <div className="min-h-screen bg-white text-black p-8 font-sans">
+        <header className="border-b-2 border-black pb-4 mb-8 flex justify-between items-center">
+          <h1 className="text-xl font-black uppercase italic">{race?.race_name} - {type.toUpperCase()}</h1>
+          <button onClick={() => window.print()} className="print:hidden border border-black px-4 py-1 text-xs font-bold uppercase">Print PDF</button>
         </header>
 
         <div className="space-y-8">
-          {rawPredictions?.map((pred: any) => {
-            const nickname = profiles?.find(p => p.id === pred.user_id)?.username || 'Onbekende Deelnemer';
-            
-            // EXTREEM VEILIGE DATA-EXTRACTIE
-            let list: string[] = [];
-            if (type === 'qualy') list = Array.isArray(pred.top_3_drivers) ? pred.top_3_drivers : [];
-            else if (type === 'sprint') list = Array.isArray(pred.top_8_drivers) ? pred.top_8_drivers : [];
-            else {
-              const t10 = Array.isArray(pred.top_10_drivers) ? pred.top_10_drivers : [];
-              const b12 = Array.isArray(pred.bottom_12_drivers) ? pred.bottom_12_drivers : [];
-              list = [...t10, ...b12];
-            }
-
-            return (
-              <div key={pred.id} className="border-t-2 border-black pt-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-black uppercase text-lg italic">{nickname}</span>
-                  <span className="text-[9px] font-mono text-gray-400">
-                    Update: {pred.updated_at ? new Date(pred.updated_at).toLocaleTimeString() : '-'}
-                  </span>
-                </div>
-                
-                {/* Geen complexe grid, maar simpele tekst-blokjes met positienummer */}
-                <div className="flex flex-wrap gap-2">
-                  {list.length > 0 ? list.map((driver, i) => (
-                    <div key={i} className="border border-gray-200 px-2 py-1 bg-gray-50 rounded min-w-[60px]">
-                      <p className="text-[7px] font-bold text-blue-600 leading-none">P{i+1}</p>
-                      <p className="text-[10px] font-black uppercase leading-tight">{driver || '???'}</p>
-                    </div>
-                  )) : <p className="text-red-500 italic text-xs">Geen data beschikbaar</p>}
-                  
-                  {type === 'race' && pred.fastest_lap_driver && (
-                    <div className="border border-blue-600 px-2 py-1 bg-blue-50 rounded">
-                      <p className="text-[7px] font-bold text-blue-600 leading-none">FL</p>
-                      <p className="text-[10px] font-black uppercase leading-tight">{pred.fastest_lap_driver}</p>
-                    </div>
-                  )}
-                </div>
+          {cleanPredictions.map((pred) => (
+            <div key={pred.id} className="border-l-4 border-black pl-4 py-2">
+              <div className="flex justify-between items-baseline mb-2">
+                <h2 className="font-black uppercase italic text-lg">{pred.username}</h2>
+                <span className="text-[10px] font-mono text-gray-400">Update: {pred.updated}</span>
               </div>
-            );
-          })}
+              
+              <div className="flex flex-wrap gap-2">
+                {pred.drivers.map((driver, i) => (
+                  <div key={i} className="bg-gray-50 border border-gray-200 px-2 py-1 rounded min-w-[55px]">
+                    <p className="text-[7px] font-bold text-blue-600">P{i+1}</p>
+                    <p className="text-[10px] font-black uppercase">{driver}</p>
+                  </div>
+                ))}
+                {pred.fastest_lap && (
+                  <div className="bg-blue-50 border border-blue-200 px-2 py-1 rounded">
+                    <p className="text-[7px] font-bold text-blue-600">FL</p>
+                    <p className="text-[10px] font-black uppercase">{pred.fastest_lap}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 print:hidden">
+          <Link href="/admin" className="text-xs underline font-bold text-gray-400 uppercase">← Terug naar dashboard</Link>
         </div>
       </div>
     );
   } catch (err: any) {
-    return <div className="p-20 text-red-500 bg-white">Render Error: {err.message}</div>;
+    return <div className="p-20 text-red-500 font-mono">Fout bij genereren: {err.message}</div>;
   }
 }
