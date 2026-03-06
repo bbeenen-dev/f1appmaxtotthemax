@@ -10,14 +10,17 @@ interface Prediction {
 export default async function NextEventCard() {
   await headers();
   const supabase = await createClient();
-  const now = new Date().toISOString();
+  
+  // We berekenen een 'buffer tijd': 3 uur in het verleden.
+  // Hierdoor blijft de race op de homepage staan tot 3 uur na de officiële starttijd.
+  const bufferTime = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
 
-  // 1. Haal de eerstvolgende race op
+  // 1. Haal de eerstvolgende race op op basis van de race_start (zondag)
   const { data: race } = await supabase
     .from('races')
     .select('*')
-    .gt('fp1_start', now)
-    .order('fp1_start', { ascending: true })
+    .gt('race_start', bufferTime) 
+    .order('race_start', { ascending: true })
     .limit(1)
     .single();
 
@@ -58,14 +61,12 @@ export default async function NextEventCard() {
       className="relative p-6 h-full min-h-[160px] flex flex-col justify-between overflow-hidden group/card"
     >
       <div className="flex justify-between items-start mb-2">
-        {/* AANGEPAST: Round indicator stijl consistent met CalendarPage */}
         <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-[#e10600]'} uppercase text-xs tracking-[0.2em] font-black italic`}>
-          Round {race.round} • Next Event
+          Round {race.round} • {new Date(race.race_start) > new Date() ? 'Next Event' : 'Live / Recent'}
         </span>
         
         {isComplete && (
           <div className="text-green-500">
-            {/* HET ROBUUSTE VINKJE TOEGEPAST */}
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -105,6 +106,7 @@ export default async function NextEventCard() {
         </div>
       </div>
 
+      {/* Achtergrondtekst subtieler gemaakt */}
       <div className="absolute -right-4 -bottom-8 font-f1 text-[100px] font-black italic text-white/[0.03] select-none pointer-events-none uppercase whitespace-nowrap">
         {race.race_name}
       </div>
