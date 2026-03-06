@@ -22,29 +22,43 @@ export default function SeasonOverviewPage() {
 
   useEffect(() => {
     async function fetchPredictions() {
-      // We halen de voorspellingen op inclusief de nickname uit de profiles tabel
-      const { data, error } = await supabase
-        .from("predictions_season")
-        .select(`
-          driver_champion,
-          constructor_champion,
-          profiles ( nickname )
-        `);
-
-      if (error) {
-        console.error("Fout bij ophalen:", error);
-      } else if (data) {
-        const formatted = data.map((item: any) => ({
-          nickname: item.profiles?.nickname || "Onbekend",
-          driver_champion: item.driver_champion,
-          constructor_champion: item.constructor_champion,
-        }));
+      try {
+        setLoading(true);
         
-        // Sorteren op alfabet
-        formatted.sort((a, b) => a.nickname.localeCompare(b.nickname));
-        setPredictions(formatted);
+        // 1. Haal de voorspellingen op
+        const { data: predData, error: predError } = await supabase
+          .from("predictions_season")
+          .select("user_id, driver_champion, constructor_champion");
+
+        if (predError) throw predError;
+
+        // 2. Haal de nicknames op uit de profiles tabel
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, nickname");
+
+        if (profileError) throw profileError;
+
+        // 3. Combineer de data handmatig op basis van user_id
+        if (predData) {
+          const formatted = predData.map((item: any) => {
+            const userProfile = profileData?.find(p => p.id === item.user_id);
+            return {
+              nickname: userProfile?.nickname || "Onbekende Coureur",
+              driver_champion: item.driver_champion || "Niet ingevuld",
+              constructor_champion: item.constructor_champion || "Niet ingevuld",
+            };
+          });
+
+          // Sorteren op alfabet
+          formatted.sort((a, b) => a.nickname.localeCompare(b.nickname));
+          setPredictions(formatted);
+        }
+      } catch (err: any) {
+        console.error("Data ophaal fout:", err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchPredictions();
@@ -64,7 +78,7 @@ export default function SeasonOverviewPage() {
         
         <header className="mb-10">
           <button 
-            onClick={() => router.back()} 
+            onClick={() => router.push('/')} // Direct naar home ipv back() voor stabiliteit
             className="text-slate-500 text-[10px] uppercase mb-4 hover:text-yellow-500 transition-colors tracking-widest"
           >
             ← Terug naar Dashboard
@@ -91,49 +105,55 @@ export default function SeasonOverviewPage() {
           </div>
         </header>
 
-        <div className="bg-[#161a23] rounded-3xl border border-slate-800/50 overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#1c222d] border-b border-slate-800">
-                  <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                    Deelnemer
-                  </th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase text-yellow-500 tracking-widest">
-                    Driver Champion
-                  </th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase text-yellow-500 tracking-widest">
-                    Constructor
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/30">
-                {predictions.map((pred, index) => (
-                  <tr key={index} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-slate-700 group-hover:bg-yellow-500 transition-colors"></div>
-                        <span className="font-black italic uppercase text-sm group-hover:text-yellow-500 transition-colors">
-                          {pred.nickname}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-300 uppercase italic tracking-tight">
-                        {pred.driver_champion}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-300 uppercase italic tracking-tight">
-                        {pred.constructor_champion}
-                      </span>
-                    </td>
+        {predictions.length > 0 ? (
+          <div className="bg-[#161a23] rounded-3xl border border-slate-800/50 overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#1c222d] border-b border-slate-800">
+                    <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Deelnemer
+                    </th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase text-yellow-500 tracking-widest">
+                      Driver Champion
+                    </th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase text-yellow-500 tracking-widest">
+                      Constructor
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800/30">
+                  {predictions.map((pred, index) => (
+                    <tr key={index} className="hover:bg-white/5 transition-colors group">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 w-2 rounded-full bg-slate-700 group-hover:bg-yellow-500 transition-colors"></div>
+                          <span className="font-black italic uppercase text-sm group-hover:text-yellow-500 transition-colors">
+                            {pred.nickname}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-300 uppercase italic tracking-tight">
+                          {pred.driver_champion}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-300 uppercase italic tracking-tight">
+                          {pred.constructor_champion}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-20 bg-[#161a23] rounded-3xl border border-dashed border-slate-800">
+            <p className="text-slate-500 italic uppercase text-xs tracking-widest">Geen voorspellingen gevonden</p>
+          </div>
+        )}
 
         <footer className="mt-12 flex flex-col items-center justify-center gap-2 opacity-30">
           <div className="h-px w-20 bg-slate-700"></div>
