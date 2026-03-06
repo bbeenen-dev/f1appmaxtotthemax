@@ -83,7 +83,7 @@ export default async function InfoPage() {
               {/* Sprint */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
-                  <h3 className="font-f1 text-xl font-black italic uppercase text-white">Sprint Race</h3>
+                  <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Sprint Race</h3>
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 8 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
@@ -94,7 +94,7 @@ export default async function InfoPage() {
               {/* Qualy */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
-                  <h3 className="font-f1 text-xl font-black italic uppercase text-white">Kwalificatie</h3>
+                  <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Kwalificatie</h3>
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 3 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
@@ -105,7 +105,7 @@ export default async function InfoPage() {
               {/* Race */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div className="flex-1">
-                  <h3 className="font-f1 text-xl font-black italic uppercase text-white">Grand Prix</h3>
+                  <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Grand Prix</h3>
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 10 correct voorspellen</p>
                 </div>
                 <div className="flex flex-col items-start md:items-end gap-1">
