@@ -11,6 +11,13 @@ interface Driver {
     team_id: string;
 }
 
+interface RaceData {
+    sprint_race_start: string | null;
+    qualifying_start: string | null;
+    race_start: string | null;
+    [key: string]: any;
+}
+
 export default function PredictionPage() {
     const params = useParams();
     const raceId = params.id;
@@ -23,6 +30,7 @@ export default function PredictionPage() {
     );
 
     const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [race, setRace] = useState<RaceData | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [enabled, setEnabled] = useState(false);
@@ -34,7 +42,7 @@ export default function PredictionPage() {
             limit: 8,
             table: "predictions_sprint",
             field: "top_8_drivers",
-            timeField: "sprint_start", // Kolomnaam in de 'races' tabel
+            timeField: "sprint_race_start", 
         },
         qualy: {
             title: "Qualifying Top 3",
@@ -54,20 +62,39 @@ export default function PredictionPage() {
 
     const config = configMap[type as string] || configMap.race;
 
+    // Live deadline check: controleer elke 30 seconden of de sessie is gestart
+    useEffect(() => {
+        const checkStatus = () => {
+            if (race && race[config.timeField]) {
+                const deadline = new Date(race[config.timeField]);
+                if (new Date() > deadline) {
+                    setIsPastDeadline(true);
+                }
+            }
+        };
+
+        const timer = setInterval(checkStatus, 30000);
+        checkStatus(); // Directe check bij render
+
+        return () => clearInterval(timer);
+    }, [race, config.timeField]);
+
     useEffect(() => {
         async function fetchData() {
             // 1. Haal race data op voor de deadline check
             const { data: raceData } = await supabase
                 .from("races")
                 .select("*")
-                .eq("race_id", raceId)
+                .eq("id", raceId) // Let op: ik heb 'race_id' naar 'id' veranderd naar aanleiding van je vorige code
                 .single();
 
-            if (raceData && raceData[config.timeField]) {
-                const deadline = new Date(raceData[config.timeField]);
-                const now = new Date();
-                if (now > deadline) {
-                    setIsPastDeadline(true);
+            if (raceData) {
+                setRace(raceData);
+                if (raceData[config.timeField]) {
+                    const deadline = new Date(raceData[config.timeField]);
+                    if (new Date() > deadline) {
+                        setIsPastDeadline(true);
+                    }
                 }
             }
 
@@ -91,7 +118,10 @@ export default function PredictionPage() {
                     .maybeSingle();
 
                 if (existingPred) {
-                    const savedIds = existingPred[config.field] as string[];
+                    const savedIds = (type === 'qualy' ? existingPred.top_3_drivers : 
+                                     type === 'sprint' ? existingPred.top_8_drivers : 
+                                     existingPred.top_10_drivers) as string[];
+                    
                     if (savedIds && driversData) {
                         const reordered = [...driversData].sort((a, b) => {
                             const indexA = savedIds.indexOf(a.driver_id);
@@ -121,8 +151,20 @@ export default function PredictionPage() {
     };
 
     const handleSave = async () => {
+        // --- STRAKKE BEVEILIGING ---
+        // Haal de tijd opnieuw op bij de klik
+        const now = new Date();
+        if (race && race[config.timeField]) {
+            const deadline = new Date(race[config.timeField]);
+            if (now > deadline) {
+                setIsPastDeadline(true);
+                alert("Te laat! De sessie is zojuist gestart. Je voorspelling kan niet meer worden opgeslagen.");
+                return;
+            }
+        }
+
         if (isPastDeadline) {
-            alert("De sessie is al gestart. Je kunt je voorspelling niet meer wijzigen.");
+            alert("De sessie is al gestart.");
             return;
         }
 
@@ -161,7 +203,7 @@ export default function PredictionPage() {
     if (loading || !enabled) {
         return (
             <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 text-[#e10600] italic animate-pulse">
-                LOADING PIT DATA...
+                SYNCING WITH PIT WALL...
             </div>
         );
     }
@@ -182,13 +224,13 @@ export default function PredictionPage() {
                                 Predict <span className="text-[#e10600]">{type}</span>
                             </h1>
                             {isPastDeadline && (
-                                <p className="text-[#e10600] font-f1 italic text-[10px] uppercase mt-2">
-                                    Sessie is gestart - Wijzigen niet meer mogelijk
+                                <p className="text-[#e10600] font-f1 italic text-[10px] uppercase mt-2 animate-pulse">
+                                    🔒 Sessie gestart - Gesloten
                                 </p>
                             )}
                         </header>
 
-                        {!isPastDeadline && (
+                        {!isPastDeadline ? (
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
@@ -196,6 +238,10 @@ export default function PredictionPage() {
                             >
                                 {saving ? "Storing..." : "Bevestigen"}
                             </button>
+                        ) : (
+                            <div className="bg-slate-900 border border-slate-800 text-slate-500 font-f1 font-black italic uppercase px-4 py-3 rounded-xl text-[10px]">
+                                Gesloten
+                            </div>
                         )}
                     </div>
                 </div>
@@ -203,7 +249,7 @@ export default function PredictionPage() {
                 <DragDropContext onDragEnd={onDragEnd}>
                     <Droppable droppableId="drivers" isDropDisabled={isPastDeadline}>
                         {(provided) => (
-                            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                            <div {...provided.droppableProps} ref={provided.innerRef} className={`space-y-3 ${isPastDeadline ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                                 {drivers.map((driver, index) => {
                                     const isInPointsZone = index < config.limit;
                                     const isLastPointPos = index === config.limit - 1;
@@ -224,15 +270,14 @@ export default function PredictionPage() {
                                                                 ? "bg-[#1c222d] border-[#e10600] scale-[1.02] z-50 shadow-2xl"
                                                                 : isInPointsZone
                                                                     ? "bg-[#161a23] border-slate-700/50 shadow-lg"
-                                                                    : "bg-[#161a23] border-slate-800/40" // Zelfde achtergrond voor iedereen
+                                                                    : "bg-[#161a23] border-slate-800/40"
                                                             }`}
                                                     >
                                                         <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-700"}`}>
                                                             {index + 1}
                                                         </div>
                                                         <div className="flex-1">
-                                                            {/* Tekst vergroot naar text-base en witheid geforceerd */}
-                                                            <p className="font-f1 font-black uppercase italic text-base tracking-tight text-white opacity-100">
+                                                            <p className="font-f1 font-black uppercase italic text-base tracking-tight text-white">
                                                                 {driver.driver_name}
                                                             </p>
                                                             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">{driver.team_id}</p>
@@ -251,7 +296,7 @@ export default function PredictionPage() {
                                             {isLastPointPos && (
                                                 <div className="my-6 flex items-center gap-4">
                                                     <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
-                                                    <span className="text-[8px] font-f1 font-black italic text-[#e10600] uppercase tracking-widest opacity-70">Cut-off</span>
+                                                    <span className="text-[8px] font-f1 font-black italic text-[#e10600] uppercase tracking-widest opacity-70">Points Cut-off</span>
                                                     <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
                                                 </div>
                                             )}
