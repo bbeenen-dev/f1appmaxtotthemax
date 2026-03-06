@@ -35,23 +35,7 @@ export default async function HomePage() {
     console.error("BTC API Error:", error);
   }
 
-  // DEADLINE CONFIGURATIE
-  const seasonDeadline = new Date('2026-03-06T20:00:00');
-  const now = new Date();
-  const isBeforeSeasonStart = now < seasonDeadline;
-
   const { data: { user } } = await supabase.auth.getUser();
-  let hasPredictedSeason = false;
-  
-  if (user) {
-    const { data } = await supabase
-      .from('predictions_season')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    
-    if (data) hasPredictedSeason = true;
-  }
 
   const { data: leaderboard } = await supabase
     .from('leaderboard')
@@ -124,41 +108,29 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* 2. JAARVOORSPELLING (DYNAMISCH) */}
+        {/* 2. SEIZOEN OVERZICHT (GEFORCEERD) */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
-          <div className={`absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#eab308_0deg,#eab308_40deg,transparent_90deg)] opacity-40 group-hover:opacity-100 transition-opacity`} />
+          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#eab308_0deg,#eab308_40deg,transparent_90deg)] opacity-40 group-hover:opacity-100 transition-opacity" />
           <Link 
-            href={isBeforeSeasonStart ? "/predict/championship" : "/predict/season-overview"} 
+            href="/predict/season-overview" 
             className="relative block bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 transition-colors group-hover:bg-[#1c222d]"
           >
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  {isBeforeSeasonStart && !hasPredictedSeason && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>}
                   <h2 className="text-2xl font-black italic uppercase text-white leading-tight">
-                    {isBeforeSeasonStart ? "Jaarvoorspelling" : "Seizoen Overzicht"}
+                    Seizoen Overzicht
                   </h2>
                 </div>
                 <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">
-                  {isBeforeSeasonStart ? "Deadline: Vrijdag 6 maart 20:00u" : "Bekijk alle voorspellingen"}
+                  Bekijk alle voorspellingen van 2026
                 </p>
               </div>
               
-              {/* Status Icoon */}
               <div className="text-yellow-500">
-                {isBeforeSeasonStart ? (
-                  hasPredictedSeason && (
-                    <div className="text-green-500">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )
-                ) : (
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                )}
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
               </div>
             </div>
           </Link>
