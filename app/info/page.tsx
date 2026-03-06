@@ -58,6 +58,9 @@ export default async function InfoPage() {
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">
                     Tikkie Status
                   </p>
+                  <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">
+                    Aankoop BTC 21:00 uur Status
+                  </p>
                   <div className="text-green-500">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
