@@ -9,7 +9,7 @@ import { headers } from 'next/headers'
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const headerStack = await headers();
+  await headers();
   const supabase = await createClient();
   
   const showMyPredictions = false;
@@ -35,7 +35,8 @@ export default async function HomePage() {
     console.error("BTC API Error:", error);
   }
 
-  const seasonDeadline = new Date('2026-03-06T17:00:00');
+  // DEADLINE OP 20:00u - zodat de kaart nu zichtbaar is
+  const seasonDeadline = new Date('2026-03-06T20:00:00');
   const now = new Date();
   const isBeforeSeasonStart = now < seasonDeadline;
 
@@ -148,7 +149,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* 3. KALENDER (DUBBELE TEKST HIERONDER VERWIJDERD) */}
+        {/* 3. KALENDER */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
           <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] overflow-hidden">
