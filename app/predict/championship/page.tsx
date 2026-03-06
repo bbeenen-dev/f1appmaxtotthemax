@@ -30,12 +30,21 @@ export default function ChampionshipPredictionPage() {
   const [saving, setSaving] = useState(false);
   const [isPastDeadline, setIsPastDeadline] = useState(false);
 
+  // De harde deadline: Vrijdag 6 maart 2026, 20:00:00 Amsterdamse tijd
+  const DEADLINE_ISO = '2026-03-06T20:00:00';
+
   useEffect(() => {
-    // Deadline check: Vrijdag 6 maart 2026, 17:00u
-    const deadline = new Date('2026-03-06T17:00:00');
-    if (new Date() > deadline) {
-      setIsPastDeadline(true);
-    }
+    // 1. Deadline check functie
+    const checkDeadline = () => {
+      const deadline = new Date(DEADLINE_ISO);
+      if (new Date() > deadline) {
+        setIsPastDeadline(true);
+      }
+    };
+
+    checkDeadline();
+    // Controleer elke minuut of de deadline is verstreken terwijl de gebruiker op de pagina is
+    const timer = setInterval(checkDeadline, 60000);
 
     async function fetchData() {
       // 1. Haal coureurs op
@@ -54,28 +63,35 @@ export default function ChampionshipPredictionPage() {
       if (drv) setDrivers(drv);
       if (tm) setTeams(tm);
 
-      // 3. Haal bestaande voorspelling op met JOUW kolomnamen
+      // 3. Haal bestaande voorspelling op
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: existing } = await supabase
           .from("predictions_season")
-          .select("driver_champion, constructor_champion") // <--- EXACTE MATCH DB
+          .select("driver_champion, constructor_champion")
           .eq("user_id", session.user.id)
           .maybeSingle();
 
         if (existing) {
           setSelectedDriver(existing.driver_champion || "");
-          setSelectedTeam(existing.constructor_champion || ""); // <--- EXACTE MATCH DB
+          setSelectedTeam(existing.constructor_champion || "");
         }
       }
       setLoading(false);
     }
+
     fetchData();
+    return () => clearInterval(timer);
   }, [supabase]);
 
   const handleSave = async () => {
-    if (isPastDeadline) {
-      alert("De deadline is verstreken.");
+    // STRENGERE BEVEILIGING: Controleer de tijd OP HET MOMENT van klikken opnieuw
+    const now = new Date();
+    const deadline = new Date(DEADLINE_ISO);
+
+    if (now > deadline) {
+      setIsPastDeadline(true);
+      alert("Helaas, de deadline van 20:00 uur is zojuist verstreken. Je voorspelling kan niet meer worden opgeslagen.");
       return;
     }
 
@@ -93,18 +109,17 @@ export default function ChampionshipPredictionPage() {
       return;
     }
 
-    // Upsert met jouw exacte kolomnamen
     const { error } = await supabase
       .from("predictions_season")
       .upsert({
         user_id: session.user.id,
         driver_champion: selectedDriver, 
-        constructor_champion: selectedTeam, // <--- EXACTE MATCH DB
+        constructor_champion: selectedTeam,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
 
     if (error) {
-      alert("Fout: " + error.message);
+      alert("Fout bij opslaan: " + error.message);
     } else {
       router.push("/");
       router.refresh();
@@ -131,6 +146,9 @@ export default function ChampionshipPredictionPage() {
               <h1 className="text-2xl font-black italic uppercase leading-none">
                 Season <span className="text-yellow-500">2026</span>
               </h1>
+              <p className="text-[9px] text-slate-500 uppercase mt-1">
+                Deadline: Vandaag 20:00u
+              </p>
             </header>
 
             {!isPastDeadline ? (
@@ -142,8 +160,8 @@ export default function ChampionshipPredictionPage() {
                 {saving ? "Storing..." : "Bevestigen"}
               </button>
             ) : (
-              <div className="text-slate-500 italic text-[10px] uppercase border border-slate-800 px-4 py-2 rounded-lg">
-                Gesloten
+              <div className="text-red-500 font-black italic text-[10px] uppercase border border-red-500/20 bg-red-500/5 px-4 py-2 rounded-lg">
+                Deadline verstreken
               </div>
             )}
           </div>
@@ -155,7 +173,7 @@ export default function ChampionshipPredictionPage() {
             <label className="block text-[10px] font-black uppercase text-yellow-500 mb-4 italic tracking-widest">
               World Driver Champion (25 PT)
             </label>
-            <div className={`grid gap-2 ${isPastDeadline ? 'opacity-50' : ''}`}>
+            <div className={`grid gap-2 ${isPastDeadline ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
               {drivers.map((driver) => (
                 <button
                   key={driver.driver_id}
@@ -163,8 +181,8 @@ export default function ChampionshipPredictionPage() {
                   onClick={() => setSelectedDriver(driver.driver_id)}
                   className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                     selectedDriver === driver.driver_id 
-                    ? "bg-yellow-500/10 border-yellow-500 text-white" 
-                    : "bg-[#0f111a] border-slate-800 text-slate-400"
+                    ? "bg-yellow-500/10 border-yellow-500 text-white shadow-[0_0_15px_rgba(234,179,8,0.1)]" 
+                    : "bg-[#0f111a] border-slate-800 text-slate-400 hover:border-slate-600"
                   }`}
                 >
                   <span className="font-black italic uppercase text-sm">{driver.driver_name}</span>
@@ -179,7 +197,7 @@ export default function ChampionshipPredictionPage() {
             <label className="block text-[10px] font-black uppercase text-yellow-500 mb-4 italic tracking-widest">
               Constructor Champion (25 PT)
             </label>
-            <div className={`grid gap-2 ${isPastDeadline ? 'opacity-50' : ''}`}>
+            <div className={`grid gap-2 ${isPastDeadline ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
               {teams.map((team) => (
                 <button
                   key={team.team_id}
@@ -188,7 +206,7 @@ export default function ChampionshipPredictionPage() {
                   className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                     selectedTeam === team.team_id 
                     ? "bg-white/5 border-white text-white" 
-                    : "bg-[#0f111a] border-slate-800 text-slate-400"
+                    : "bg-[#0f111a] border-slate-800 text-slate-400 hover:border-slate-600"
                   }`}
                   style={{ borderLeft: `4px solid ${team.hex_color}` }}
                 >
