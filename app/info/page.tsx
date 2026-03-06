@@ -87,7 +87,7 @@ export default async function InfoPage() {
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 8 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
-                  1 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per plek</span>
+                  1 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per goede voorspelling</span>
                 </p>
               </div>
 
@@ -98,7 +98,7 @@ export default async function InfoPage() {
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 3 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
-                  3 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per plek</span>
+                  3 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per goede voorspelling</span>
                 </p>
               </div>
 
@@ -109,8 +109,8 @@ export default async function InfoPage() {
                   <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 10 correct voorspellen</p>
                 </div>
                 <div className="flex flex-col items-start md:items-end gap-1">
-                  <p className="font-f1 font-black italic uppercase text-xl text-white">5 PT exact goed</p>
-                  <p className="font-f1 font-black italic uppercase text-xl text-white">2 PT één plek ernaast</p>
+                  <p className="font-f1 font-black italic uppercase text-xl text-white">5 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per goede voorspelling</span></p>
+                  <p className="font-f1 font-black italic uppercase text-xl text-white">2 PT <span className="text-slate-500 text-xs tracking-normal font-bold">één plek ernaast</span></p>
                 </div>
               </div>
 
