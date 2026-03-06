@@ -55,7 +55,7 @@ export default async function InfoPage() {
                   </p>
                 </div>
                 <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
-                   Verdeling prijzenpot: </br>80% Winnaar</br>20% Runner-up
+                   Verdeling prijzenpot: 80% Winnaar 20% Runner-up
                 </p>
               </div>
 
