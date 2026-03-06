@@ -134,7 +134,7 @@ export default async function HomePage() {
                     {!hasPredictedSeason && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>}
                     <h2 className="text-2xl font-black italic uppercase text-white leading-tight">Jaarvoorspelling</h2>
                   </div>
-                  <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">Deadline: Vrijdag 6 maart 17:00u</p>
+                  <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">Deadline: Vrijdag 6 maart 20:00u</p>
                 </div>
                 {hasPredictedSeason && (
                   <div className="text-green-500">
