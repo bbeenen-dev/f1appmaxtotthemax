@@ -14,12 +14,13 @@ export default async function HomePage() {
   
   const showMyPredictions = false;
 
-  const initialBtcPrice = 59231;
-  const initialDepositEuro = 130;
-  const fixedBtcAmount = initialDepositEuro / initialBtcPrice;
+  // --- BITCOIN CONFIGURATIE ---
+  const initialDepositEuro = 130; // De werkelijke inleg
+  const fixedBtcAmount = 0.00218923; // Het werkelijke aantal ontvangen BTC
+  // De aankoopkoers was technisch gezien: initialDepositEuro / fixedBtcAmount (ca. €59.381)
   
   let currentEuroValue = initialDepositEuro; 
-  let currentBtcPrice = initialBtcPrice;
+  let currentBtcPrice = 59381; // Fallback prijs
 
   try {
     const response = await fetch(
@@ -29,6 +30,7 @@ export default async function HomePage() {
     const data = await response.json();
     if (data.bitcoin && data.bitcoin.eur) {
       currentBtcPrice = data.bitcoin.eur;
+      // Bereken de huidige waarde van je 0,00218923 BTC tegen de huidige koers
       currentEuroValue = fixedBtcAmount * currentBtcPrice;
     }
   } catch (error) {
@@ -84,9 +86,10 @@ export default async function HomePage() {
               </div>
               
               <div className="flex flex-col items-center">
-                 <div className={`text-sm font-black italic mb-2 tracking-tighter flex items-center gap-1 ${currentEuroValue >= 130 ? 'text-green-500' : 'text-red-500'}`}>
-                    <span className="text-xs">{currentEuroValue >= 130 ? '▲' : '▼'}</span> 
-                    {(((currentEuroValue - 130) / 130) * 100).toFixed(1)}%
+                 {/* Berekening rendement t.o.v. de €130 inleg */}
+                 <div className={`text-sm font-black italic mb-2 tracking-tighter flex items-center gap-1 ${currentEuroValue >= initialDepositEuro ? 'text-green-500' : 'text-red-500'}`}>
+                    <span className="text-xs">{currentEuroValue >= initialDepositEuro ? '▲' : '▼'}</span> 
+                    {(((currentEuroValue - initialDepositEuro) / initialDepositEuro) * 100).toFixed(1)}%
                  </div>
                  <div className="bg-[#f7931a]/10 p-3 rounded-2xl border border-[#f7931a]/20 shadow-[0_0_15px_rgba(247,147,26,0.1)]">
                     <svg className="w-8 h-8 text-[#f7931a]" fill="currentColor" viewBox="0 0 24 24">
@@ -126,8 +129,6 @@ export default async function HomePage() {
                   Bekijk alle seizoensvoorspellingen
                 </p>
               </div>
-              
-              {/* Gele pijl verwijderd */}
             </div>
           </Link>
         </section>
