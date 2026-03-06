@@ -78,7 +78,7 @@ export default function SeasonOverviewPage() {
         
         <header className="mb-10">
           <button 
-            onClick={() => router.push('/')} // Direct naar home ipv back() voor stabiliteit
+            onClick={() => router.push('/')}
             className="text-slate-500 text-[10px] uppercase mb-4 hover:text-yellow-500 transition-colors tracking-widest"
           >
             ← Terug naar Dashboard
@@ -90,7 +90,7 @@ export default function SeasonOverviewPage() {
                 Season <span className="text-yellow-500">2026</span>
               </h1>
               <p className="text-slate-500 text-[10px] uppercase mt-2 tracking-[0.3em]">
-                Gezamenlijke Voorspellingen
+                Alle Voorspellingen
               </p>
             </div>
             <div className="bg-yellow-500/10 border border-yellow-500/20 px-4 py-2 rounded-lg">
@@ -126,12 +126,9 @@ export default function SeasonOverviewPage() {
                   {predictions.map((pred, index) => (
                     <tr key={index} className="hover:bg-white/5 transition-colors group">
                       <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-2 rounded-full bg-slate-700 group-hover:bg-yellow-500 transition-colors"></div>
-                          <span className="font-black italic uppercase text-sm group-hover:text-yellow-500 transition-colors">
-                            {pred.nickname}
-                          </span>
-                        </div>
+                        <span className="font-black italic uppercase text-sm group-hover:text-yellow-500 transition-colors">
+                          {pred.nickname}
+                        </span>
                       </td>
                       <td className="px-6 py-5">
                         <span className="text-sm font-bold text-slate-300 uppercase italic tracking-tight">
