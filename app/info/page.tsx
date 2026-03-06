@@ -43,43 +43,43 @@ export default async function InfoPage() {
               Inzet & Prijzen
             </h2>
             
-            <div className="space-y-8">
-              <div className="flex flex-col gap-1">
-                <p className="text-3xl font-f1 italic font-black uppercase">
-                  €10 <span className="text-slate-200 text-lg italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
-                </p>
-                <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">
-                  Beheerd in Bitcoin (BTC) door Boudewijn
+            <div className="space-y-12">
+              {/* Box 1: Inzet & Verdeling */}
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <p className="text-4xl font-f1 italic font-black uppercase">
+                    €10 <span className="text-white text-xl italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
+                  </p>
+                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
+                    Beheerd in Bitcoin (BTC) door Boudewijn
+                  </p>
+                </div>
+                <p className="text-lg uppercase font-black tracking-[0.15em] text-white">
+                   <span className="text-slate-400">Verdeling:</span> 80% Winnaar / 20% Runner-up
                 </p>
               </div>
 
+              {/* Box 2: Status (met vinkje en kruisje) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 py-8 border-y border-slate-800/50">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
-                      Tikkie Status
-                    </p>
-                    <div className="text-green-500">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
-                      Aankoop BTC
-                    </p>
-                    <div className="text-[#e10600]">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </div>
+                <div className="flex items-center gap-4">
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-300">
+                    Tikkie Status
+                  </p>
+                  <div className="text-green-500">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
                 </div>
-                <div className="flex items-start md:items-center">
-                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
-                    Verdeling: <span className="text-white">80% Winnaar / 20% Runner-up</span>
+                <div className="flex items-center gap-4">
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-300">
+                    Aankoop BTC
                   </p>
+                  <div className="text-[#e10600]">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Sprint Race</h3>
-                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-200 mt-1">Top 8 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">Top 8 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   1 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per goede voorspelling</span>
@@ -107,7 +107,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Kwalificatie</h3>
-                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-200 mt-1">Top 3 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">Top 3 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   3 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per goede voorspelling</span>
@@ -118,7 +118,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div className="flex-1">
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Grand Prix</h3>
-                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-200 mt-1">Top 10 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">Top 10 correct voorspellen</p>
                 </div>
                 <div className="flex flex-col items-start gap-1">
                   <p className="font-f1 font-black italic uppercase text-xl text-white">
@@ -134,7 +134,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Seizoen Bonus</h3>
-                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-200 mt-1">WDC & WCC Titels</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">WDC & WCC Titels</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   25 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per titel</span>
