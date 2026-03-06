@@ -48,7 +48,7 @@ export default async function InfoPage() {
                 <p className="text-3xl font-f1 italic font-black uppercase">
                   €10 <span className="text-slate-200 text-lg italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
                 </p>
-                <p className="text-white text-base italic opacity-90 uppercase tracking-wider font-bold">
+                <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">
                   Beheerd in Bitcoin (BTC) door Boudewijn
                 </p>
               </div>
@@ -84,7 +84,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-white">Sprint Race</h3>
-                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">Top 8 correct voorspellen</p>
+                  <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 8 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   1 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per plek</span>
@@ -95,7 +95,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-white">Kwalificatie</h3>
-                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">Top 3 correct voorspellen</p>
+                  <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 3 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   3 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per plek</span>
@@ -106,7 +106,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div className="flex-1">
                   <h3 className="font-f1 text-xl font-black italic uppercase text-white">Grand Prix</h3>
-                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">Top 10 correct voorspellen</p>
+                  <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">Top 10 correct voorspellen</p>
                 </div>
                 <div className="flex flex-col items-start md:items-end gap-1">
                   <p className="font-f1 font-black italic uppercase text-xl text-white">5 PT exact goed</p>
