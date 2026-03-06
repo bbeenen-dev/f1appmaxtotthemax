@@ -17,6 +17,7 @@ interface Race {
   race_start: string;
   fp1_start: string;
   sprint_race_start?: string;
+  qualifying_start: string;
 }
 
 export default async function CalendarPage() {
@@ -25,7 +26,6 @@ export default async function CalendarPage() {
   
   const { data: { user } } = await supabase.auth.getUser();
   
-  // Haal de races op
   const { data: races } = await supabase
     .from('races')
     .select('*')
@@ -34,7 +34,6 @@ export default async function CalendarPage() {
   let allPredictions: Prediction[] = [];
 
   if (user) {
-    // Parallel ophalen van alle voorspelling-types
     const [racePreds, qualiPreds, sprintPreds] = await Promise.all([
       supabase.from('predictions_race').select('race_id').eq('user_id', user.id),
       supabase.from('predictions_qualifying').select('race_id').eq('user_id', user.id),
@@ -46,16 +45,26 @@ export default async function CalendarPage() {
     if (sprintPreds.data) sprintPreds.data.forEach(p => allPredictions.push({ race_id: p.race_id, type: 'sprint' }));
   }
 
-  const formatDateRange = (fp1: string, race: string) => {
-    if (!fp1 || !race) return "";
-    const start = new Date(fp1);
-    const end = new Date(race);
-    const month = end.toLocaleDateString('nl-NL', { month: 'short' });
+  // Aangepaste functie voor de juiste datums
+  const formatDateRange = (race: Race) => {
+    // Pak de vroegste datum van het weekend (Sprint start vaak eerder dan Qualy/Race)
+    // We gebruiken fp1_start als de absolute start van het weekend
+    const startDateRaw = race.fp1_start;
+    const endDateRaw = race.race_start;
+
+    if (!startDateRaw || !endDateRaw) return "";
+
+    const start = new Date(startDateRaw);
+    const end = new Date(endDateRaw);
+    const monthEnd = end.toLocaleDateString('nl-NL', { month: 'short' });
     
+    // Als start en eind in dezelfde maand vallen: "6-8 mrt"
     if (start.getMonth() === end.getMonth()) {
-      return `${start.getDate()}-${end.getDate()} ${month}`;
+      return `${start.getDate()}-${end.getDate()} ${monthEnd}`;
     }
-    return `${start.getDate()} ${start.toLocaleDateString('nl-NL', { month: 'short' })} - ${end.getDate()} ${month}`;
+    // Als het weekend over twee maanden loopt: "31 mrt - 2 apr"
+    const monthStart = start.toLocaleDateString('nl-NL', { month: 'short' });
+    return `${start.getDate()} ${monthStart} - ${end.getDate()} ${monthEnd}`;
   };
 
   return (
@@ -77,7 +86,6 @@ export default async function CalendarPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {races.map((race: Race) => {
               const preds = allPredictions.filter(p => p.race_id === race.id);
-              
               const hasQualy = preds.some(p => p.type === 'qualy');
               const hasRace = preds.some(p => p.type === 'race');
               const hasSprint = preds.some(p => p.type === 'sprint');
@@ -101,7 +109,6 @@ export default async function CalendarPage() {
 
                   <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d]">
                     <div className="flex justify-between items-start mb-4">
-                      {/* ROUND INDICATOR NU EEN SLAG GROTER (text-xs) */}
                       <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-xs tracking-[0.2em] leading-none font-black italic`}>
                         Round {race.round}
                       </span>
@@ -124,7 +131,8 @@ export default async function CalendarPage() {
                       </p>
                       <span className="text-slate-700 text-xs">•</span>
                       <p className="text-slate-400 font-f1 text-sm font-bold uppercase tracking-widest italic">
-                        {formatDateRange(race.fp1_start, race.race_start)}
+                        {/* Hier roepen we de nieuwe functie aan met het hele race object */}
+                        {formatDateRange(race)}
                       </p>
                     </div>
 
@@ -135,12 +143,10 @@ export default async function CalendarPage() {
                           <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
                         </div>
                       )}
-
                       <div className="flex flex-col gap-1">
                         <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
                         <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
                       </div>
-
                       <div className="flex flex-col gap-1">
                         <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Race</span>
                         <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
