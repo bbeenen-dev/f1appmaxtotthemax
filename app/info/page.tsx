@@ -26,7 +26,7 @@ export default async function InfoPage() {
         
         {/* WELKOM SECTIE */}
         <header className="mb-20">
-          <div className="w-12 h-1 bg-[#e10600] mb-6"></div>
+          <div className="w-12 h-1 bg-[#e10600] mb-6 shadow-[0_0_10px_rgba(225,6,0,0.5)]"></div>
           <h1 className="font-f1 text-5xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-8">
             Welkom, <span className="text-[#e10600]">{nickname}!</span>
           </h1>
@@ -43,29 +43,29 @@ export default async function InfoPage() {
               Inzet & Prijzen
             </h2>
             
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="flex flex-col gap-1">
-                <p className="text-2xl font-f1 italic font-black uppercase">
-                  €10 <span className="text-slate-500 text-sm italic font-medium tracking-normal lowercase">per deelnemer</span>
+                <p className="text-3xl font-f1 italic font-black uppercase">
+                  €10 <span className="text-slate-200 text-lg italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
                 </p>
-                <p className="text-white text-sm italic opacity-80 uppercase tracking-wider font-bold">
+                <p className="text-white text-base italic opacity-90 uppercase tracking-wider font-bold">
                   Beheerd in Bitcoin (BTC) door Boudewijn
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-8 py-6 border-y border-slate-800/50">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs uppercase font-bold tracking-widest text-slate-400">
+              <div className="flex flex-wrap gap-x-12 gap-y-6 py-8 border-y border-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">
                     Tikkie Status
                   </p>
                   <div className="text-green-500">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs uppercase font-bold tracking-widest text-slate-400">
+                <div className="flex items-center gap-3">
+                  <p className="text-sm uppercase font-black tracking-[0.15em] text-slate-300">
                     Verdeling: <span className="text-white">80% Winnaar / 20% Runner-up</span>
                   </p>
                 </div>
@@ -81,47 +81,47 @@ export default async function InfoPage() {
             
             <div className="grid gap-12">
               {/* Sprint */}
-              <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-2 border-b border-slate-900 pb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-white">Sprint Race</h3>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Top 8 correct voorspellen</p>
+                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">Top 8 correct voorspellen</p>
                 </div>
-                <p className="font-f1 font-black italic uppercase text-lg text-white">
-                  1 PT <span className="text-slate-600 text-xs tracking-normal">per plek</span>
+                <p className="font-f1 font-black italic uppercase text-xl text-white">
+                  1 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per plek</span>
                 </p>
               </div>
 
               {/* Qualy */}
-              <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-2 border-b border-slate-900 pb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-white">Kwalificatie</h3>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Top 3 correct voorspellen</p>
+                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">Top 3 correct voorspellen</p>
                 </div>
-                <p className="font-f1 font-black italic uppercase text-lg text-white">
-                  3 PT <span className="text-slate-600 text-xs tracking-normal">per plek</span>
+                <p className="font-f1 font-black italic uppercase text-xl text-white">
+                  3 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per plek</span>
                 </p>
               </div>
 
               {/* Race */}
-              <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-2 border-b border-slate-900 pb-6">
-                <div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
+                <div className="flex-1">
                   <h3 className="font-f1 text-xl font-black italic uppercase text-white">Grand Prix</h3>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Top 10 correct voorspellen</p>
+                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">Top 10 correct voorspellen</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-f1 font-black italic uppercase text-lg text-white">5 PT exact goed</p>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">2 PT één plek ernaast</p>
+                <div className="flex flex-col items-start md:items-end gap-1">
+                  <p className="font-f1 font-black italic uppercase text-xl text-white">5 PT exact goed</p>
+                  <p className="font-f1 font-black italic uppercase text-xl text-white">2 PT één plek ernaast</p>
                 </div>
               </div>
 
               {/* Kampioenschap */}
-              <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-2 border-b border-slate-900 pb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Seizoen Bonus</h3>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">WDC & WCC Titels</p>
+                  <p className="text-xs text-slate-200 uppercase font-black tracking-widest mt-2">WDC & WCC Titels</p>
                 </div>
-                <p className="font-f1 font-black italic uppercase text-lg text-white">
-                  25 PT <span className="text-slate-600 text-xs tracking-normal">per titel</span>
+                <p className="font-f1 font-black italic uppercase text-xl text-white">
+                  25 PT <span className="text-slate-500 text-xs tracking-normal font-bold">per titel</span>
                 </p>
               </div>
             </div>
@@ -129,8 +129,8 @@ export default async function InfoPage() {
 
         </div>
 
-        <footer className="mt-32 pb-12 opacity-20">
-          <p className="text-white text-[9px] uppercase tracking-[0.6em] font-black italic text-center">
+        <footer className="mt-32 pb-12 opacity-30">
+          <p className="text-white text-[10px] uppercase tracking-[0.6em] font-black italic text-center">
             F1 Prediction League 2026
           </p>
         </footer>
