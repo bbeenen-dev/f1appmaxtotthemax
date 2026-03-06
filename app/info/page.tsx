@@ -5,7 +5,6 @@ export default async function InfoPage() {
   await headers();
   const supabase = await createClient();
   
-  // Haal de huidige gebruiker en hun profiel op
   const { data: { user } } = await supabase.auth.getUser();
   let nickname = "Racer"; 
 
@@ -22,108 +21,130 @@ export default async function InfoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
-      {/* Container breder gemaakt: max-w-5xl */}
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#0f111a] text-white p-6 md:p-12 pb-32">
+      <div className="max-w-4xl mx-auto">
         
         {/* WELKOM SECTIE */}
-        <header className="mb-16 relative">
-          <div className="w-20 h-1.5 bg-[#e10600] mb-6 shadow-[0_0_15px_rgba(225,6,0,0.5)]"></div>
-          <h1 className="font-f1 text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-none">
+        <header className="mb-20">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-1 bg-[#e10600]"></div>
+            <span className="text-[#e10600] font-f1 font-black uppercase tracking-[0.3em] text-sm italic">Official Rules</span>
+          </div>
+          <h1 className="font-f1 text-5xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-8">
             Welkom, <span className="text-[#e10600]">{nickname}!</span>
           </h1>
-          <p className="mt-8 text-slate-300 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-slate-800 pl-8">
-            Eindelijk onze eigen Formule 1 poule app. Gemaakt onder dwang en onder protest om dat de andere apps zuigen!
+          <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic max-w-2xl border-l-2 border-[#e10600] pl-6">
+            Eindelijk onze eigen Formule 1 poule app. Gemaakt onder dwang en onder protest omdat volgens de kenners de andere apps zuigen!
           </p>
         </header>
 
-        <div className="space-y-12">
+        <div className="grid gap-8">
           
           {/* SECTIE: INZET & PRIJZEN */}
-          <section className="bg-[#161a23] rounded-3xl p-6 md:p-10 border border-slate-800 shadow-2xl">
-            <h2 className="font-f1 text-3xl font-black italic uppercase text-white mb-8 tracking-tight flex items-center gap-4">
-              <span className="w-3 h-8 bg-[#e10600]"></span>
-              Inzet & Prijzen
-            </h2>
-            
-            <div className="space-y-10">
-              <p className="text-slate-300 text-lg md:text-xl leading-relaxed">
-                De inzet is <span className="text-white font-bold">10 euro per persoon</span>. De totale pot wordt beheerd in Bitcoin door Boudewijn.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-[#0f111a] p-6 rounded-2xl border border-slate-800 flex flex-col justify-center">
-                  <p className="text-[11px] text-slate-500 uppercase font-black mb-2 tracking-[0.2em]">Tikkie Deadline</p>
-                  <p className="text-base md:text-lg font-f1 italic uppercase">Vrijdag 6 maart <span className="text-white font-bold">20:00u</span></p>
+          <section className="group">
+            <div className="bg-[#161a23] rounded-2xl p-8 border border-slate-800/50 transition-all duration-300 group-hover:border-[#e10600]/30 shadow-xl">
+              <div className="flex items-center justify-between mb-10">
+                <h2 className="font-f1 text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
+                  Inzet & Prijzen
+                </h2>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">Season 2026</span>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-12">
+                <div className="space-y-4">
+                  <p className="text-slate-400 leading-relaxed uppercase text-xs font-bold tracking-widest">De Pot</p>
+                  <p className="text-2xl font-f1 italic font-black uppercase">
+                    €10 <span className="text-slate-500 text-sm italic font-medium tracking-normal">per deelnemer</span>
+                  </p>
+                  <p className="text-sm text-slate-500 italic">
+                    Beheerd in Bitcoin (BTC) door Banker Boudewijn.
+                  </p>
                 </div>
-                <div className="bg-[#0f111a] p-6 rounded-2xl border border-slate-800 flex flex-col justify-center">
-                  <p className="text-[11px] text-slate-500 uppercase font-black mb-2 tracking-[0.2em]">BTC Transactie</p>
-                  <p className="text-base md:text-lg font-f1 italic uppercase">Aankoop: <span className="text-white font-bold">Vrijdag 21:00u</span></p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                    <p className="text-[9px] text-[#e10600] uppercase font-black mb-1">Winnaar</p>
+                    <p className="text-xl font-f1 font-black italic">80%</p>
+                  </div>
+                  <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                    <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Runner-up</p>
+                    <p className="text-xl font-f1 font-black italic">20%</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t border-slate-800 pt-8">
-                <p className="text-sm md:text-base text-slate-400 leading-relaxed uppercase tracking-wide">
-                  Verkoop vindt plaats op de dag van de laatste race om <span className="text-white font-bold">21:00u</span>. 
-                  <br className="hidden md:block" />
-                  <span className="inline-block mt-4 bg-slate-800 text-white px-5 py-2 rounded-lg font-bold italic mr-3 border border-slate-700">1e Plek: 80%</span>
-                  <span className="inline-block mt-4 bg-slate-800 text-white px-5 py-2 rounded-lg font-bold italic border border-slate-700">2e Plek: 20%</span>
-                </p>
+              <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-800/50 pt-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 rounded-full bg-[#e10600] animate-pulse"></div>
+                  <p className="text-[10px] md:text-xs uppercase font-bold tracking-widest text-slate-400">
+                    Tikkie Deadline: <span className="text-white">6 Maart 20:00u</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  <p className="text-[10px] md:text-xs uppercase font-bold tracking-widest text-slate-400">
+                    BTC Aankoop: <span className="text-white">6 Maart 21:00u</span>
+                  </p>
+                </div>
               </div>
             </div>
           </section>
 
           {/* SECTIE: PUNTENTELLING */}
-          <section className="bg-[#161a23] rounded-3xl p-6 md:p-10 border border-slate-800 shadow-2xl">
-            <h2 className="font-f1 text-3xl font-black italic uppercase text-white mb-12 tracking-tight flex items-center gap-4">
-              <span className="w-3 h-8 bg-white"></span>
-              Puntentelling
-            </h2>
+          <section className="bg-[#161a23] rounded-2xl border border-slate-800/50 shadow-xl overflow-hidden">
+            <div className="bg-slate-900/50 p-8 border-b border-slate-800/50">
+               <h2 className="font-f1 text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">
+                  Puntentelling
+                </h2>
+            </div>
             
-            <div className="grid gap-12">
+            <div className="divide-y divide-slate-800/50">
               {/* Sprint */}
-              <div className="flex gap-8 items-start">
-                <div className="text-slate-800 font-f1 text-4xl md:text-5xl font-black italic leading-none opacity-50">01</div>
-                <div className="flex-1">
-                  <h3 className="font-f1 text-xl md:text-2xl font-black italic uppercase text-white mb-2">Sprint Race</h3>
-                  <p className="text-xs md:text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">Top 8 correct voorspellen</p>
-                  <span className="border border-slate-700 text-slate-200 px-4 py-2 rounded-lg text-xs md:text-sm font-black uppercase italic">1 PT per goede plek</span>
+              <div className="p-8 hover:bg-white/[0.02] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="font-f1 text-lg font-black italic uppercase text-[#e10600] mb-1">Sprint Race</h3>
+                  <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">Top 8 correct voorspellen</p>
+                </div>
+                <div className="bg-slate-900 px-6 py-3 rounded-lg border border-slate-800">
+                  <span className="text-sm font-f1 font-black uppercase italic italic text-slate-200">1 PT <span className="text-slate-500 text-[10px] tracking-normal">per plek</span></span>
                 </div>
               </div>
 
               {/* Qualy */}
-              <div className="flex gap-8 items-start">
-                <div className="text-slate-800 font-f1 text-4xl md:text-5xl font-black italic leading-none opacity-50">02</div>
-                <div className="flex-1">
-                  <h3 className="font-f1 text-xl md:text-2xl font-black italic uppercase text-white mb-2">Kwalificatie</h3>
-                  <p className="text-xs md:text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">Top 3 correct voorspellen</p>
-                  <span className="border border-slate-700 text-slate-200 px-4 py-2 rounded-lg text-xs md:text-sm font-black uppercase italic">3 PT per goede plek</span>
+              <div className="p-8 hover:bg-white/[0.02] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="font-f1 text-lg font-black italic uppercase text-white mb-1">Kwalificatie</h3>
+                  <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">Top 3 correct voorspellen</p>
+                </div>
+                <div className="bg-slate-900 px-6 py-3 rounded-lg border border-slate-800">
+                  <span className="text-sm font-f1 font-black uppercase italic text-slate-200">3 PT <span className="text-slate-500 text-[10px] tracking-normal">per plek</span></span>
                 </div>
               </div>
 
               {/* Race */}
-              <div className="flex gap-8 items-start">
-                <div className="text-slate-800 font-f1 text-4xl md:text-5xl font-black italic leading-none opacity-50">03</div>
-                <div className="flex-1">
-                  <h3 className="font-f1 text-xl md:text-2xl font-black italic uppercase text-white mb-2">Grand Prix</h3>
-                  <p className="text-xs md:text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">Top 10 correct voorspellen</p>
-                  <div className="flex flex-wrap gap-3">
-                    <span className="bg-white text-black px-4 py-2 rounded-lg text-xs md:text-sm font-black uppercase italic">5 PT exact goed</span>
-                    <span className="border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs md:text-sm font-black uppercase italic">2 PT één plek ernaast</span>
+              <div className="p-8 hover:bg-white/[0.02] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="font-f1 text-lg font-black italic uppercase text-white mb-1">De hoofdrace</h3>
+                  <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">Top 10 correct voorspellen</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase italic">
+                    5 PT Exact
+                  </div>
+                  <div className="bg-slate-800 text-slate-300 px-4 py-2 rounded-lg text-[10px] font-black uppercase italic border border-slate-700">
+                    2 PT ±1 plek
                   </div>
                 </div>
               </div>
 
               {/* Kampioenschap */}
-              <div className="flex gap-8 items-start">
-                <div className="text-slate-800 font-f1 text-4xl md:text-5xl font-black italic leading-none opacity-50">04</div>
-                <div className="flex-1">
-                  <h3 className="font-f1 text-xl md:text-2xl font-black italic uppercase text-white mb-2">Seizoen Bonus</h3>
-                  <p className="text-xs md:text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">Wereldkampioenen voorspellen</p>
-                  <div className="flex flex-wrap gap-3">
-                    <span className="bg-[#e10600] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-black uppercase italic shadow-[0_0_15px_rgba(225,6,0,0.3)]">Coureur: 25 PT</span>
-                    <span className="bg-[#e10600] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-black uppercase italic shadow-[0_0_15px_rgba(225,6,0,0.3)]">Constructeur: 25 PT</span>
-                  </div>
+              <div className="p-8 hover:bg-white/[0.02] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="font-f1 text-lg font-black italic uppercase text-white mb-1">Seizoen Bonus</h3>
+                  <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">World Champions</p>
+                </div>
+                <div className="bg-[#e10600] px-6 py-3 rounded-lg shadow-[0_0_20px_rgba(225,6,0,0.2)]">
+                  <span className="text-sm font-f1 font-black uppercase italic text-white italic">25 PT <span className="text-white/60 text-[10px] tracking-normal uppercase">per titel</span></span>
                 </div>
               </div>
             </div>
@@ -131,8 +152,13 @@ export default async function InfoPage() {
 
         </div>
 
-        <footer className="mt-24 pt-10 border-t border-slate-900 text-center">
-          <p className="text-slate-700 text-[10px] md:text-xs uppercase tracking-[0.5em] font-bold italic">
+        <footer className="mt-32 pb-12 text-center">
+          <div className="flex justify-center gap-2 mb-6">
+            <div className="w-1 h-1 bg-slate-800"></div>
+            <div className="w-1 h-1 bg-slate-800"></div>
+            <div className="w-1 h-1 bg-slate-800"></div>
+          </div>
+          <p className="text-slate-700 text-[9px] uppercase tracking-[0.6em] font-black italic">
             F1 Prediction League 2026 • Data Driven Competition
           </p>
         </footer>
