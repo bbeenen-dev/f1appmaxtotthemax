@@ -108,7 +108,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* 2. SEIZOEN OVERZICHT (GEFORCEERD) */}
+        {/* 2. SEIZOENSVOORSPELLINGEN */}
         <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-xl">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#eab308_0deg,#eab308_40deg,transparent_90deg)] opacity-40 group-hover:opacity-100 transition-opacity" />
           <Link 
@@ -119,19 +119,15 @@ export default async function HomePage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-2xl font-black italic uppercase text-white leading-tight">
-                    Seizoen Overzicht
+                    Seizoensvoorspellingen
                   </h2>
                 </div>
                 <p className="text-slate-400 text-xs font-black uppercase tracking-[0.1em] italic">
-                  Bekijk alle voorspellingen van 2026
+                  Bekijk alle seizoensvoorspellingen
                 </p>
               </div>
               
-              <div className="text-yellow-500">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </div>
+              {/* Gele pijl verwijderd */}
             </div>
           </Link>
         </section>
