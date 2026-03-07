@@ -1,245 +1,245 @@
 "use client";
 
-import { use, useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import Link from 'next/link';
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
-export const dynamic = "force-dynamic";
+interface Driver {
+    driver_id: string;
+    driver_name: string;
+    team_id: string;
+}
 
 interface RaceData {
-  id: string;
-  race_name: string;
-  city_name: string;
-  sprint_race_start: string | null;
-  qualifying_start: string | null;
-  race_start: string | null;
-  round: number;
+    sprint_race_start: string | null;
+    qualifying_start: string | null;
+    race_start: string | null;
+    [key: string]: any;
 }
 
-interface GridPrediction {
-  user_id: string;
-  nickname: string;
-  drivers: string[];
-  fastest_lap?: string;
-}
+export default function PredictionPage() {
+    const params = useParams();
+    const raceId = params.id;
+    const type = params.type;
+    const router = useRouter();
 
-export default function RaceCardPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const raceId = resolvedParams.id;
-  
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+    const supabase = useMemo(() => createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ), []);
 
-  const [race, setRace] = useState<RaceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isChangingTab, setIsChangingTab] = useState(false);
-  const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
-  const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
-  const [gridData, setGridData] = useState<GridPrediction[]>([]);
-  const [now, setNow] = useState(new Date());
+    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [race, setRace] = useState<RaceData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [isPastDeadline, setIsPastDeadline] = useState(false);
+    
+    // Cruciaal voor Next.js 15: voorkom hydration mismatches
+    const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 10000);
-    return () => clearInterval(timer);
-  }, []);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
-  useEffect(() => {
-    async function getInitialData() {
-      const { data: raceData } = await supabase
-        .from('races')
-        .select('id, race_name, city_name, sprint_race_start, qualifying_start, race_start, round')
-        .eq('id', raceId)
-        .single();
+    const config = useMemo(() => {
+        const configMap: Record<string, { title: string; limit: number; table: string; field: string; timeField: string }> = {
+            sprint: { title: "Sprint Top 8", limit: 8, table: "predictions_sprint", field: "top_8_drivers", timeField: "sprint_race_start" },
+            qualy: { title: "Qualifying Top 3", limit: 3, table: "predictions_qualifying", field: "top_3_drivers", timeField: "qualifying_start" },
+            race: { title: "Grand Prix Top 10", limit: 10, table: "predictions_race", field: "top_10_drivers", timeField: "race_start" },
+        };
+        return configMap[type as string] || configMap.race;
+    }, [type]);
 
-      if (raceData) {
-        setRace(raceData);
-        if (raceData.sprint_race_start) setActiveTab('sprint');
-      }
+    useEffect(() => {
+        let isMounted = true;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const [q, s, r] = await Promise.all([
-          supabase.from('predictions_qualifying').select('id').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-          supabase.from('predictions_sprint').select('id').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-          supabase.from('predictions_race').select('id').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-        ]);
-        setStatus({ qualy: !!q.data, sprint: !!s.data, race: !!r.data });
-      }
-      setLoading(false);
+        async function fetchData() {
+            // Stap 1: Haal alles parallel op om 'waterval' renders te voorkomen
+            const [raceRes, driversRes, sessionRes] = await Promise.all([
+                supabase.from("races").select("*").eq("id", raceId).single(),
+                supabase.from("drivers").select("driver_id, driver_name, team_id").eq("active", true).order("driver_name", { ascending: true }),
+                supabase.auth.getSession()
+            ]);
+
+            if (!isMounted) return;
+
+            // Stap 2: Bereken deadline status
+            if (raceRes.data) {
+                setRace(raceRes.data);
+                const deadline = new Date(raceRes.data[config.timeField]);
+                if (new Date() > deadline) setIsPastDeadline(true);
+            }
+
+            let currentDrivers = driversRes.data || [];
+            const session = sessionRes.data.session;
+
+            // Stap 3: Haal voorspelling op indien ingelogd
+            if (session?.user) {
+                const { data: existingPred } = await supabase
+                    .from(config.table)
+                    .select("*")
+                    .eq("race_id", raceId)
+                    .eq("user_id", session.user.id)
+                    .maybeSingle();
+
+                if (existingPred && existingPred[config.field]) {
+                    const savedIds = existingPred[config.field] as string[];
+                    currentDrivers = [...currentDrivers].sort((a, b) => {
+                        const indexA = savedIds.indexOf(a.driver_id);
+                        const indexB = savedIds.indexOf(b.driver_id);
+                        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                        if (indexA !== -1) return -1;
+                        if (indexB !== -1) return 1;
+                        return 0;
+                    });
+                }
+            }
+
+            // Stap 4: Update state in één keer
+            setDrivers(currentDrivers);
+            setLoading(false);
+        }
+
+        fetchData();
+        return () => { isMounted = false; };
+    }, [raceId, config, supabase]);
+
+    const onDragEnd = (result: DropResult) => {
+        if (!result.destination || isPastDeadline) return;
+        const items = Array.from(drivers);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+        setDrivers(items);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+            alert("Log in om op te slaan.");
+            setSaving(false);
+            return;
+        }
+
+        const payload = {
+            user_id: session.user.id,
+            race_id: parseInt(raceId as string),
+            [config.field]: drivers.slice(0, config.limit).map(d => d.driver_id),
+            updated_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase.from(config.table).upsert(payload, { onConflict: "user_id, race_id" });
+        if (error) alert(error.message);
+        else router.refresh();
+        setSaving(false);
+    };
+
+    // Laadscherm zonder pulse op de hele pagina om visuele rust te houden
+    if (!mounted || loading) {
+        return (
+            <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 text-[#e10600] italic">
+                <span className="animate-pulse tracking-widest">SYNCING WITH PIT WALL...</span>
+            </div>
+        );
     }
-    getInitialData();
-  }, [raceId, supabase]);
 
-  useEffect(() => {
-    async function fetchGrid() {
-      setIsChangingTab(true);
-      const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
-      const isStarted = startTime && new Date(startTime) <= now;
+    return (
+        <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
+            <div className="max-w-xl mx-auto">
+                <div className="sticky top-0 z-[100] bg-[#0f111a] pt-4 pb-6 border-b border-slate-800 mb-8">
+                    <div className="flex items-center justify-between gap-4">
+                        <header>
+                            <button onClick={() => router.back()} className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-2 tracking-widest hover:text-[#e10600] transition-colors">
+                                <span className="text-lg">←</span> Terug
+                            </button>
+                            <h1 className="font-f1 text-2xl font-black italic uppercase tracking-tighter leading-none">
+                                Predict <span className="text-[#e10600]">{type}</span>
+                            </h1>
+                            {isPastDeadline && (
+                                <p className="text-[#e10600] font-f1 italic text-[10px] uppercase mt-2 animate-pulse">
+                                    🔒 Sessie gestart - Gesloten
+                                </p>
+                            )}
+                        </header>
 
-      if (!isStarted) {
-        setGridData([]);
-        setTimeout(() => setIsChangingTab(false), 300);
-        return;
-      }
+                        <button
+                            onClick={handleSave}
+                            disabled={saving || isPastDeadline}
+                            className="flex-shrink-0 bg-[#e10600] hover:bg-white hover:text-[#e10600] disabled:opacity-30 text-white font-f1 font-black italic uppercase px-6 py-3 rounded-xl shadow-lg transition-all duration-300 tracking-widest text-[10px]"
+                        >
+                            {saving ? "Storing..." : isPastDeadline ? "Gesloten" : "Bevestigen"}
+                        </button>
+                    </div>
+                </div>
 
-      const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
-      const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
-      
-      if (preds) {
-        const userIds = preds.map(p => p.user_id);
-        const { data: profiles } = await supabase.from('profiles').select('id, nickname').in('id', userIds);
-        
-        const formatted = preds.map(p => ({
-          user_id: p.user_id,
-          nickname: profiles?.find(prof => prof.id === p.user_id)?.nickname || 'Anoniem',
-          drivers: activeTab === 'qualy' ? (p.top_3_drivers || []) : activeTab === 'sprint' ? (p.top_8_drivers || []) : [...(p.top_10_drivers || []), ...(p.bottom_12_drivers || [])],
-          fastest_lap: p.fastest_lap_driver
-        }));
-        setGridData(formatted);
-      }
-      setTimeout(() => setIsChangingTab(false), 400);
-    }
-    if (race) fetchGrid();
-  }, [activeTab, race, raceId, supabase, now]);
+                {/* Belangrijk: Render DragDropContext alleen op de client om flikkering te voorkomen */}
+                <DragDropContext onDragEnd={onDragEnd}>
+                    <Droppable droppableId="drivers-list" isDropDisabled={isPastDeadline}>
+                        {(provided) => (
+                            <div 
+                                {...provided.droppableProps} 
+                                ref={provided.innerRef} 
+                                className={`space-y-3 transition-opacity duration-500 ${isPastDeadline ? 'opacity-60 grayscale-[0.5]' : 'opacity-100'}`}
+                            >
+                                {drivers.map((driver, index) => {
+                                    const isInPointsZone = index < config.limit;
+                                    const isLastPointPos = index === config.limit - 1;
 
-  const isLocked = (tab: 'sprint' | 'qualy' | 'race') => {
-    if (!race) return true;
-    const startTime = tab === 'qualy' ? race.qualifying_start : tab === 'sprint' ? race.sprint_race_start : race.race_start;
-    return !startTime || new Date(startTime) > now;
-  };
-
-  if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">LOADING...</div>;
-
-  return (
-    <div className="min-h-screen bg-[#0f111a] text-white p-4 pb-32 overflow-x-hidden">
-      <div className="max-w-2xl mx-auto">
-        <header className="mb-8">
-          <div className="flex items-baseline gap-3 mb-2">
-            <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Round {race?.round}</span>
-            <div className="h-[2px] flex-grow bg-slate-800/50"></div>
-          </div>
-          <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight italic">{race?.race_name}</h1>
-          <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
-        </header>
-
-        <div className="grid gap-4 mb-8">
-          {race?.sprint_race_start && (
-            <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
-          )}
-          <PredictionCard title="Qualifying" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Grand Prix" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-          
-          <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtual Standing" href={`/races/${raceId}/live`} accentColor="#005AFF" />
-        </div>
-
-        <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-f1 font-black italic uppercase text-white">Voorspellingen</h2>
-            <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
-              {(['sprint', 'qualy', 'race'] as const).map((t) => (
-                (t !== 'sprint' || race?.sprint_race_start) && (
-                  <button
-                    key={t}
-                    onClick={() => setActiveTab(t)}
-                    className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg scale-105' : 'text-slate-500 hover:text-white'}`}
-                  >
-                    {isLocked(t) && <span>🔒</span>} {t}
-                  </button>
-                )
-              ))}
+                                    return (
+                                        <div key={driver.driver_id}>
+                                            <Draggable 
+                                                draggableId={driver.driver_id} 
+                                                index={index} 
+                                                isDragDisabled={isPastDeadline}
+                                            >
+                                                {(provided, snapshot) => (
+                                                    <div
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        {...(isPastDeadline ? {} : provided.dragHandleProps)}
+                                                        className={`relative flex items-center p-4 rounded-xl border transition-all duration-200 ${
+                                                            snapshot.isDragging
+                                                                ? "bg-[#1c222d] border-[#e10600] scale-[1.02] z-50 shadow-2xl"
+                                                                : "bg-[#161a23] border-slate-800/40"
+                                                        } ${isInPointsZone && !snapshot.isDragging ? "border-slate-700/50 shadow-lg" : ""}`}
+                                                    >
+                                                        <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-700"}`}>
+                                                            {index + 1}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="font-f1 font-black uppercase italic text-base tracking-tight text-white">
+                                                                {driver.driver_name}
+                                                            </p>
+                                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">{driver.team_id}</p>
+                                                        </div>
+                                                        
+                                                        {!isPastDeadline && (
+                                                            <div className="text-slate-700">
+                                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                                                </svg>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </Draggable>
+                                            {isLastPointPos && (
+                                                <div className="my-6 flex items-center gap-4">
+                                                    <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
+                                                    <span className="text-[8px] font-f1 font-black italic text-[#e10600] uppercase tracking-widest opacity-70">Points Cut-off</span>
+                                                    <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {provided.placeholder}
+                            </div>
+                        )}
+                    </Droppable>
+                </DragDropContext>
             </div>
-          </div>
-
-          <div className={`transition-opacity duration-200 ${isChangingTab ? 'opacity-0' : 'opacity-100'}`}>
-            {isLocked(activeTab) ? (
-              <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
-                <span className="text-2xl mb-2 opacity-30">🔒</span>
-                <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center px-4">Beschikbaar vanaf start sessie</h3>
-              </div>
-            ) : (
-              <div key={activeTab} className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-3 text-[9px] font-f1 uppercase text-slate-500 min-w-[110px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
-                      {gridData[0]?.drivers.map((_, i) => (
-                        <th key={i} className="px-3 py-3 text-[9px] font-f1 uppercase text-[#e10600] text-center min-w-[65px]">P{i+1}</th>
-                      ))}
-                      {activeTab === 'race' && <th className="px-3 py-3 text-[9px] font-f1 uppercase text-blue-500 text-center min-w-[65px]">F-Lap</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/20">
-                    {gridData.length > 0 ? gridData.map((row) => (
-                      <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
-                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
-                          {row.nickname}
-                        </td>
-                        {row.drivers.map((d, i) => (
-                          <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">{d || '-'}</td>
-                        ))}
-                        {activeTab === 'race' && <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>}
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic">Laden...</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
-              <div className="flex items-center gap-2">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
-                <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-              </div>
-            </div>
-            <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-          </div>
         </div>
-      </div>
-    </Link>
-  );
-}
-
-function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40 transition-opacity duration-500" />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-              <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-            </div>
-            {isDone ? (
-              <div className="text-green-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            ) : (
-              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
+    );
 }
