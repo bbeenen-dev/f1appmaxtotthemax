@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -33,36 +33,37 @@ export default function PredictionPage() {
     const [race, setRace] = useState<RaceData | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [enabled, setEnabled] = useState(false);
     const [isPastDeadline, setIsPastDeadline] = useState(false);
 
-    const configMap: Record<string, { title: string; limit: number; table: string; field: string; timeField: string }> = {
-        sprint: {
-            title: "Sprint Top 8",
-            limit: 8,
-            table: "predictions_sprint",
-            field: "top_8_drivers",
-            timeField: "sprint_race_start", 
-        },
-        qualy: {
-            title: "Qualifying Top 3",
-            limit: 3,
-            table: "predictions_qualifying",
-            field: "top_3_drivers",
-            timeField: "qualifying_start",
-        },
-        race: {
-            title: "Grand Prix Top 10",
-            limit: 10,
-            table: "predictions_race",
-            field: "top_10_drivers",
-            timeField: "race_start",
-        },
-    };
+    // --- OPTIMALISATIE 1: Stabiele configuratie ---
+    const config = useMemo(() => {
+        const configMap: Record<string, { title: string; limit: number; table: string; field: string; timeField: string }> = {
+            sprint: {
+                title: "Sprint Top 8",
+                limit: 8,
+                table: "predictions_sprint",
+                field: "top_8_drivers",
+                timeField: "sprint_race_start", 
+            },
+            qualy: {
+                title: "Qualifying Top 3",
+                limit: 3,
+                table: "predictions_qualifying",
+                field: "top_3_drivers",
+                timeField: "qualifying_start",
+            },
+            race: {
+                title: "Grand Prix Top 10",
+                limit: 10,
+                table: "predictions_race",
+                field: "top_10_drivers",
+                timeField: "race_start",
+            },
+        };
+        return configMap[type as string] || configMap.race;
+    }, [type]);
 
-    const config = configMap[type as string] || configMap.race;
-
-    // Live deadline check: controleer elke 30 seconden of de sessie is gestart
+    // Live deadline check
     useEffect(() => {
         const checkStatus = () => {
             if (race && race[config.timeField]) {
@@ -74,21 +75,24 @@ export default function PredictionPage() {
         };
 
         const timer = setInterval(checkStatus, 30000);
-        checkStatus(); // Directe check bij render
+        checkStatus();
 
         return () => clearInterval(timer);
     }, [race, config.timeField]);
 
+    // --- OPTIMALISATIE 2: Data ophalen zonder onnodige re-triggers ---
     useEffect(() => {
+        let isMounted = true;
+
         async function fetchData() {
-            // 1. Haal race data op voor de deadline check
+            // Haal race data op
             const { data: raceData } = await supabase
                 .from("races")
                 .select("*")
-                .eq("id", raceId) // Let op: ik heb 'race_id' naar 'id' veranderd naar aanleiding van je vorige code
+                .eq("id", raceId)
                 .single();
 
-            if (raceData) {
+            if (raceData && isMounted) {
                 setRace(raceData);
                 if (raceData[config.timeField]) {
                     const deadline = new Date(raceData[config.timeField]);
@@ -98,18 +102,17 @@ export default function PredictionPage() {
                 }
             }
 
-            // 2. Haal coureurs op
+            // Haal coureurs op
             const { data: driversData } = await supabase
                 .from("drivers")
                 .select("driver_id, driver_name, team_id")
                 .eq("active", true)
                 .order("driver_name", { ascending: true });
 
-            if (driversData) setDrivers(driversData);
-
-            // 3. Haal bestaande voorspelling op
+            // Haal bestaande voorspelling op
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
+            
+            if (session?.user && isMounted) {
                 const { data: existingPred } = await supabase
                     .from(config.table)
                     .select("*")
@@ -117,12 +120,10 @@ export default function PredictionPage() {
                     .eq("user_id", session.user.id)
                     .maybeSingle();
 
-                if (existingPred) {
-                    const savedIds = (type === 'qualy' ? existingPred.top_3_drivers : 
-                                     type === 'sprint' ? existingPred.top_8_drivers : 
-                                     existingPred.top_10_drivers) as string[];
+                if (existingPred && driversData) {
+                    const savedIds = existingPred[config.field] as string[];
                     
-                    if (savedIds && driversData) {
+                    if (savedIds) {
                         const reordered = [...driversData].sort((a, b) => {
                             const indexA = savedIds.indexOf(a.driver_id);
                             const indexB = savedIds.indexOf(b.driver_id);
@@ -132,15 +133,22 @@ export default function PredictionPage() {
                             return 0;
                         });
                         setDrivers(reordered);
+                    } else {
+                        setDrivers(driversData);
                     }
+                } else if (driversData) {
+                    setDrivers(driversData);
                 }
             }
 
-            setLoading(false);
-            setEnabled(true);
+            if (isMounted) {
+                setLoading(false);
+            }
         }
+
         fetchData();
-    }, [raceId, type, config.table, config.field, config.timeField, supabase]);
+        return () => { isMounted = false; };
+    }, [raceId, config, supabase]); // config is nu stabiel door useMemo
 
     const onDragEnd = (result: DropResult) => {
         if (!result.destination || isPastDeadline) return;
@@ -151,28 +159,21 @@ export default function PredictionPage() {
     };
 
     const handleSave = async () => {
-        // --- STRAKKE BEVEILIGING ---
-        // Haal de tijd opnieuw op bij de klik
         const now = new Date();
         if (race && race[config.timeField]) {
             const deadline = new Date(race[config.timeField]);
             if (now > deadline) {
                 setIsPastDeadline(true);
-                alert("Te laat! De sessie is zojuist gestart. Je voorspelling kan niet meer worden opgeslagen.");
+                alert("Te laat! De sessie is gestart.");
                 return;
             }
-        }
-
-        if (isPastDeadline) {
-            alert("De sessie is al gestart.");
-            return;
         }
 
         setSaving(true);
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session?.user) {
-            alert("Je moet ingelogd zijn om op te slaan.");
+            alert("Je moet ingelogd zijn.");
             setSaving(false);
             return;
         }
@@ -191,7 +192,6 @@ export default function PredictionPage() {
             .upsert(payload, { onConflict: "user_id, race_id" });
 
         if (error) {
-            console.error(error);
             alert("Fout bij opslaan: " + error.message);
         } else {
             router.push(`/races/${raceId}`);
@@ -200,7 +200,7 @@ export default function PredictionPage() {
         setSaving(false);
     };
 
-    if (loading || !enabled) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 text-[#e10600] italic animate-pulse">
                 SYNCING WITH PIT WALL...
