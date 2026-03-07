@@ -55,11 +55,11 @@ export default async function InfoPage() {
                   </p>
                 </div>
                 <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
-                   Verdeling prijzenpot: 80% Winnaar 20% Runner-up
+                    Verdeling prijzenpot: 80% Winnaar 20% Runner-up
                 </p>
               </div>
 
-              {/* Box 2: Status (met vinkje en kruisje) */}
+              {/* Box 2: Status (Beide nu met vinkje) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 py-8 border-y border-slate-800/50">
                 <div className="flex items-center gap-4">
                   <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-300">
@@ -75,9 +75,9 @@ export default async function InfoPage() {
                   <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-300">
                     Aankoop BTC
                   </p>
-                  <div className="text-[#e10600]">
+                  <div className="text-green-500">
                     <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 </div>
