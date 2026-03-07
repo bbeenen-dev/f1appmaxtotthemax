@@ -1,3 +1,5 @@
+// voorspelpagina met drag and drop
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";

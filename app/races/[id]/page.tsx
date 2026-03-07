@@ -1,3 +1,5 @@
+// pagina met type voorspellingen, live tracker en voorspellingen alle deelnemers
+
 "use client";
 
 import { use, useEffect, useState } from 'react';
