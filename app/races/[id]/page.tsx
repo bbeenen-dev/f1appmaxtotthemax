@@ -1,8 +1,6 @@
-// pagina met type voorspellingen, live tracker en voorspellingen alle deelnemers
-
 "use client";
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
 
@@ -29,10 +27,11 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   const resolvedParams = use(params);
   const raceId = resolvedParams.id;
   
-  const supabase = createBrowserClient(
+  // FIX: Memoizeer de client om herschepping bij renders te voorkomen
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ), []);
 
   const [race, setRace] = useState<RaceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,11 +41,13 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
 
+  // Timer voor de lock-status (beïnvloedt de data-fetch niet meer)
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 10000);
     return () => clearInterval(timer);
   }, []);
 
+  // Initiële data ophalen
   useEffect(() => {
     async function getInitialData() {
       const { data: raceData } = await supabase
@@ -74,19 +75,20 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
     getInitialData();
   }, [raceId, supabase]);
 
+  // FIX: Deze effect-hook luistert NIET meer naar 'now' om flikkeren te voorkomen
   useEffect(() => {
     async function fetchGrid() {
-      setIsChangingTab(true);
       const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
-      const isStarted = startTime && new Date(startTime) <= now;
+      const isStarted = startTime && new Date(startTime) <= new Date();
 
       if (!isStarted) {
         setGridData([]);
-        setTimeout(() => setIsChangingTab(false), 300);
         return;
       }
 
+      setIsChangingTab(true);
       const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
+      
       const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
       
       if (preds) {
@@ -101,10 +103,11 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
         }));
         setGridData(formatted);
       }
-      setTimeout(() => setIsChangingTab(false), 400);
+      setIsChangingTab(false);
     }
-    if (race) fetchGrid();
-  }, [activeTab, race, raceId, supabase, now]);
+    
+    if (race?.id) fetchGrid();
+  }, [activeTab, race?.id, raceId, supabase]); // 'now' bewust weggelaten
 
   const isLocked = (tab: 'sprint' | 'qualy' | 'race') => {
     if (!race) return true;
@@ -122,7 +125,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
             <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Round {race?.round}</span>
             <div className="h-[2px] flex-grow bg-slate-800/50"></div>
           </div>
-          <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight italic">{race?.race_name}</h1>
+          <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight">{race?.race_name}</h1>
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
@@ -154,14 +157,14 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
 
-          <div className={`transition-opacity duration-200 ${isChangingTab ? 'opacity-0' : 'opacity-100'}`}>
+          <div className={`transition-opacity duration-300 ${isChangingTab ? 'opacity-50' : 'opacity-100'}`}>
             {isLocked(activeTab) ? (
               <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
                 <span className="text-2xl mb-2 opacity-30">🔒</span>
                 <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center px-4">Beschikbaar vanaf start sessie</h3>
               </div>
             ) : (
-              <div key={activeTab} className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
+              <div className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-800">
@@ -184,7 +187,11 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                         {activeTab === 'race' && <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>}
                       </tr>
                     )) : (
-                      <tr><td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic">Laden...</td></tr>
+                      <tr>
+                        <td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic uppercase tracking-widest">
+                          Wachten op data...
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -197,6 +204,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   );
 }
 
+// Hulpsub-componenten (LiveCard & PredictionCard blijven functioneel gelijk, maar met opgeschoonde code)
 function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
