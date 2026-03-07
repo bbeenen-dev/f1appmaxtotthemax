@@ -1,314 +1,216 @@
 "use client";
+import { use, useEffect, useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
+import Link from 'next/link';
 
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-
-interface Driver {
-    driver_id: string;
-    driver_name: string;
-    team_id: string;
-}
+export const dynamic = "force-dynamic";
 
 interface RaceData {
-    sprint_race_start: string | null;
-    qualifying_start: string | null;
-    race_start: string | null;
-    [key: string]: any;
+  id: string;
+  race_name: string;
+  city_name: string;
+  sprint_race_start: string | null;
+  round: number;
 }
 
-export default function PredictionPage() {
-    const params = useParams();
-    const raceId = params.id;
-    const type = params.type;
-    const router = useRouter();
+interface PredictionStatus {
+  qualy: boolean;
+  sprint: boolean;
+  race: boolean;
+}
 
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-    const [drivers, setDrivers] = useState<Driver[]>([]);
-    const [race, setRace] = useState<RaceData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [isPastDeadline, setIsPastDeadline] = useState(false);
+export default function RaceCardPage({ params }: PageProps) {
+  const resolvedParams = use(params);
+  const raceId = resolvedParams.id;
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-    // --- OPTIMALISATIE 1: Stabiele configuratie ---
-    const config = useMemo(() => {
-        const configMap: Record<string, { title: string; limit: number; table: string; field: string; timeField: string }> = {
-            sprint: {
-                title: "Sprint Top 8",
-                limit: 8,
-                table: "predictions_sprint",
-                field: "top_8_drivers",
-                timeField: "sprint_race_start", 
-            },
-            qualy: {
-                title: "Qualifying Top 3",
-                limit: 3,
-                table: "predictions_qualifying",
-                field: "top_3_drivers",
-                timeField: "qualifying_start",
-            },
-            race: {
-                title: "Grand Prix Top 10",
-                limit: 10,
-                table: "predictions_race",
-                field: "top_10_drivers",
-                timeField: "race_start",
-            },
-        };
-        return configMap[type as string] || configMap.race;
-    }, [type]);
+  const [race, setRace] = useState<RaceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [status, setStatus] = useState<PredictionStatus>({
+    qualy: false,
+    sprint: false,
+    race: false
+  });
 
-    // Live deadline check
-    useEffect(() => {
-        const checkStatus = () => {
-            if (race && race[config.timeField]) {
-                const deadline = new Date(race[config.timeField]);
-                if (new Date() > deadline) {
-                    setIsPastDeadline(true);
-                }
-            }
-        };
+  useEffect(() => {
+    let isMounted = true;
+    async function getRaceAndStatus() {
+      if (!raceId || String(raceId).includes('%')) return;
+      try {
+        setLoading(true);
+        const { data: raceData, error: raceError } = await supabase
+          .from('races')
+          .select('id, race_name, city_name, sprint_race_start, round')
+          .eq('id', raceId)
+          .single();
 
-        const timer = setInterval(checkStatus, 30000);
-        checkStatus();
+        if (raceError) throw raceError;
+        if (isMounted) setRace(raceData);
 
-        return () => clearInterval(timer);
-    }, [race, config.timeField]);
-
-    // --- OPTIMALISATIE 2: Data ophalen zonder onnodige re-triggers ---
-    useEffect(() => {
-        let isMounted = true;
-
-        async function fetchData() {
-            // Haal race data op
-            const { data: raceData } = await supabase
-                .from("races")
-                .select("*")
-                .eq("id", raceId)
-                .single();
-
-            if (raceData && isMounted) {
-                setRace(raceData);
-                if (raceData[config.timeField]) {
-                    const deadline = new Date(raceData[config.timeField]);
-                    if (new Date() > deadline) {
-                        setIsPastDeadline(true);
-                    }
-                }
-            }
-
-            // Haal coureurs op
-            const { data: driversData } = await supabase
-                .from("drivers")
-                .select("driver_id, driver_name, team_id")
-                .eq("active", true)
-                .order("driver_name", { ascending: true });
-
-            // Haal bestaande voorspelling op
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session?.user && isMounted) {
-                const { data: existingPred } = await supabase
-                    .from(config.table)
-                    .select("*")
-                    .eq("race_id", raceId)
-                    .eq("user_id", session.user.id)
-                    .maybeSingle();
-
-                if (existingPred && driversData) {
-                    const savedIds = existingPred[config.field] as string[];
-                    
-                    if (savedIds) {
-                        const reordered = [...driversData].sort((a, b) => {
-                            const indexA = savedIds.indexOf(a.driver_id);
-                            const indexB = savedIds.indexOf(b.driver_id);
-                            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                            if (indexA !== -1) return -1;
-                            if (indexB !== -1) return 1;
-                            return 0;
-                        });
-                        setDrivers(reordered);
-                    } else {
-                        setDrivers(driversData);
-                    }
-                } else if (driversData) {
-                    setDrivers(driversData);
-                }
-            }
-
-            if (isMounted) {
-                setLoading(false);
-            }
-        }
-
-        fetchData();
-        return () => { isMounted = false; };
-    }, [raceId, config, supabase]); // config is nu stabiel door useMemo
-
-    const onDragEnd = (result: DropResult) => {
-        if (!result.destination || isPastDeadline) return;
-        const items = Array.from(drivers);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        setDrivers(items);
-    };
-
-    const handleSave = async () => {
-        const now = new Date();
-        if (race && race[config.timeField]) {
-            const deadline = new Date(race[config.timeField]);
-            if (now > deadline) {
-                setIsPastDeadline(true);
-                alert("Te laat! De sessie is gestart.");
-                return;
-            }
-        }
-
-        setSaving(true);
         const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
 
-        if (!session?.user) {
-            alert("Je moet ingelogd zijn.");
-            setSaving(false);
-            return;
+        if (user && isMounted) {
+          const [qualyCheck, sprintCheck, raceCheck] = await Promise.all([
+            supabase.from('predictions_qualifying').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
+            supabase.from('predictions_sprint').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
+            supabase.from('predictions_race').select('id').eq('race_id', raceId).eq('user_id', user.id).maybeSingle(),
+          ]);
+
+          if (isMounted) {
+            setStatus({
+              qualy: !!qualyCheck.data,
+              sprint: !!sprintCheck.data,
+              race: !!raceCheck.data
+            });
+          }
         }
-
-        const topDriversIds = drivers.slice(0, config.limit).map((d) => d.driver_id);
-
-        const payload = {
-            user_id: session.user.id,
-            race_id: parseInt(raceId as string),
-            [config.field]: topDriversIds,
-            updated_at: new Date().toISOString(),
-        };
-
-        const { error } = await supabase
-            .from(config.table)
-            .upsert(payload, { onConflict: "user_id, race_id" });
-
-        if (error) {
-            alert("Fout bij opslaan: " + error.message);
-        } else {
-            router.push(`/races/${raceId}`);
-            router.refresh();
-        }
-        setSaving(false);
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 text-[#e10600] italic animate-pulse">
-                SYNCING WITH PIT WALL...
-            </div>
-        );
+      } catch (err: any) {
+        if (isMounted) setDbError(err.message || "Er ging iets mis.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     }
+    getRaceAndStatus();
+    return () => { isMounted = false; };
+  }, [raceId, supabase]);
 
-    return (
-        <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
-            <div className="max-w-xl mx-auto">
-                <div className="sticky top-0 z-[100] bg-[#0f111a] pt-4 pb-6 border-b border-slate-800 mb-8">
-                    <div className="flex items-center justify-between gap-4">
-                        <header>
-                            <button
-                                onClick={() => router.back()}
-                                className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-2 tracking-widest hover:text-[#e10600] transition-colors"
-                            >
-                                <span className="text-lg">←</span> Terug
-                            </button>
-                            <h1 className="font-f1 text-2xl font-black italic uppercase tracking-tighter leading-none">
-                                Predict <span className="text-[#e10600]">{type}</span>
-                            </h1>
-                            {isPastDeadline && (
-                                <p className="text-[#e10600] font-f1 italic text-[10px] uppercase mt-2 animate-pulse">
-                                    🔒 Sessie gestart - Gesloten
-                                </p>
-                            )}
-                        </header>
+  if (loading) return (
+    <div className="min-h-screen bg-[#0f111a] flex items-center justify-center">
+      <div className="text-[#e10600] font-f1 font-black italic animate-pulse text-2xl tracking-widest uppercase text-center">
+        Loading Race Dashboard...
+      </div>
+    </div>
+  );
 
-                        {!isPastDeadline ? (
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="flex-shrink-0 bg-[#e10600] hover:bg-white hover:text-[#e10600] disabled:opacity-30 text-white font-f1 font-black italic uppercase px-6 py-3 rounded-xl shadow-lg transition-all duration-300 tracking-widest text-[10px]"
-                            >
-                                {saving ? "Storing..." : "Bevestigen"}
-                            </button>
-                        ) : (
-                            <div className="bg-slate-900 border border-slate-800 text-slate-500 font-f1 font-black italic uppercase px-4 py-3 rounded-xl text-[10px]">
-                                Gesloten
-                            </div>
-                        )}
-                    </div>
-                </div>
+  return (
+    <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32">
+      <div className="max-w-2xl mx-auto">
+        
+        <Link href="/races" className="group flex items-center gap-2 text-slate-500 text-[10px] font-f1 uppercase mb-8 tracking-[0.2em] hover:text-[#e10600] transition-colors">
+          <span className="text-lg transition-transform group-hover:-translate-x-1">←</span> Kalender
+        </Link>
 
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <Droppable droppableId="drivers" isDropDisabled={isPastDeadline}>
-                        {(provided) => (
-                            <div {...provided.droppableProps} ref={provided.innerRef} className={`space-y-3 ${isPastDeadline ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-                                {drivers.map((driver, index) => {
-                                    const isInPointsZone = index < config.limit;
-                                    const isLastPointPos = index === config.limit - 1;
+        <header className="mb-12 relative">
+          <div className="flex items-baseline gap-3 mb-2">
+            <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase tracking-tighter">Round {race?.round}</span>
+            <div className="h-[2px] flex-grow bg-slate-800/50"></div>
+          </div>
+          <h1 className="text-5xl md:text-6xl font-f1 font-black italic uppercase text-white leading-none tracking-tighter">
+            {race?.race_name}
+          </h1>
+          <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
+        </header>
 
-                                    return (
-                                        <div key={driver.driver_id}>
-                                            <Draggable 
-                                                draggableId={driver.driver_id} 
-                                                index={index} 
-                                                isDragDisabled={isPastDeadline}
-                                            >
-                                                {(provided, snapshot) => (
-                                                    <div
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        {...(isPastDeadline ? {} : provided.dragHandleProps)}
-                                                        className={`relative flex items-center p-4 rounded-xl border transition-all duration-200 ${snapshot.isDragging
-                                                                ? "bg-[#1c222d] border-[#e10600] scale-[1.02] z-50 shadow-2xl"
-                                                                : isInPointsZone
-                                                                    ? "bg-[#161a23] border-slate-700/50 shadow-lg"
-                                                                    : "bg-[#161a23] border-slate-800/40"
-                                                            }`}
-                                                    >
-                                                        <div className={`w-10 font-f1 font-black italic text-xl ${isInPointsZone ? "text-[#e10600]" : "text-slate-700"}`}>
-                                                            {index + 1}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <p className="font-f1 font-black uppercase italic text-base tracking-tight text-white">
-                                                                {driver.driver_name}
-                                                            </p>
-                                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">{driver.team_id}</p>
-                                                        </div>
-                                                        
-                                                        {!isPastDeadline && (
-                                                            <div className="text-slate-700">
-                                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                                                </svg>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                            {isLastPointPos && (
-                                                <div className="my-6 flex items-center gap-4">
-                                                    <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
-                                                    <span className="text-[8px] font-f1 font-black italic text-[#e10600] uppercase tracking-widest opacity-70">Points Cut-off</span>
-                                                    <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#e10600] to-transparent opacity-50"></div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                {provided.placeholder}
-                            </div>
-                        )}
-                    </Droppable>
-                </DragDropContext>
-            </div>
+        {dbError && (
+          <div className="mb-6 p-4 bg-red-900/10 border border-red-900/50 rounded-xl text-red-500 text-[10px] font-f1 uppercase tracking-widest italic text-center">
+            {dbError}
+          </div>
+        )}
+
+        {/* DE VOORSPELLINGSKAARTEN (QUALY, SPRINT, RACE) */}
+        <div className="grid gap-6">
+          {race?.sprint_race_start && (
+            <PredictionCard 
+              title="Sprint Race" 
+              subtitle="Short Burst Points • Top 8"
+              href={`/races/${raceId}/predict/sprint`}
+              isDone={status.sprint}
+              accentColor="bg-orange-500"
+            />
+          )}
+
+          <PredictionCard 
+            title="Qualifying" 
+            subtitle="Top 3 Shootout"
+            href={`/races/${raceId}/predict/qualy`}
+            isDone={status.qualy}
+            accentColor="bg-red-600"
+          />
+
+          <PredictionCard 
+            title="Grand Prix" 
+            subtitle="Main Event • Top 10 + Fastest Lap"
+            href={`/races/${raceId}/predict/race`}
+            isDone={status.race}
+            accentColor="bg-[#e10600]"
+          />
+
+          {/* SCHEIDINGSLIJN */}
+          <div className="h-[1px] w-full bg-slate-800/50 my-4" />
+
+          {/* LIVE TRACKER ONDERAAN */}
+          <LiveCard 
+            title="Live Tracker" 
+            subtitle="Virtual Standing • Real-time Updates"
+            href={`/races/${raceId}/live`} 
+            accentColor="#005AFF" 
+          />
         </div>
-    );
+      </div>
+    </div>
+  );
+}
+
+// COMPONENT VOOR DE LIVE TRACKER KNOP
+function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
+        <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-[#005AFF] animate-pulse"></span>
+                <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+              </div>
+            </div>
+            <span className="text-[#005AFF] text-2xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+          </div>
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100" style={{ backgroundColor: accentColor }} />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// COMPONENT VOOR DE VOORSPELLINGS OPTIES
+function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-2xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative bg-[#161a23] p-6 rounded-[calc(1rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className={`text-2xl font-f1 font-black italic uppercase leading-none mb-1 transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
+              <p className="text-slate-500 text-[9px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+            </div>
+            {isDone ? (
+              <div className="flex items-center gap-2">
+                <span className="font-f1 text-[10px] text-green-500 font-bold italic tracking-tighter uppercase">Ready</span>
+                <div className="text-green-500">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+              </div>
+            ) : (
+              <span className="text-[#e10600] text-2xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+            )}
+          </div>
+          <div className={`absolute bottom-0 left-6 right-6 h-[2px] transition-transform duration-500 scale-x-0 group-hover:scale-x-100 ${isDone ? 'bg-green-500' : accentColor}`} />
+        </div>
+      </div>
+    </Link>
+  );
 }
