@@ -1,224 +1,162 @@
-"use client";
-import { use, useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+// CalendarPage
+import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
-export const dynamic = "force-dynamic";
-interface RaceData {
-  id: string;
-  race_name: string;
-  city_name: string;
-  sprint_race_start: string | null;
-  qualifying_start: string | null;
-  race_start: string | null;
-  round: number;
+import { headers } from 'next/headers';
+
+// Types voor betere foutcontrole
+interface Prediction {
+  race_id: number;
+  type: 'race' | 'qualy' | 'sprint';
 }
-interface GridPrediction {
-  user_id: string;
-  nickname: string;
-  drivers: string[];
-  fastest_lap?: string;
+
+interface Race {
+  id: number;
+  round: number;
+  race_name: string;
+  city_name: string;
+  race_start: string;
+  fp1_start: string;
+  sprint_race_start?: string;
 }
-export default function RaceCardPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const raceId = resolvedParams.id;
-  
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const [race, setRace] = useState<RaceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isChangingTab, setIsChangingTab] = useState(false);
-  const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
-  const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
-  const [gridData, setGridData] = useState<GridPrediction[]>([]);
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 10000);
-    return () => clearInterval(timer);
-  }, []);
-  useEffect(() => {
-    async function getInitialData() {
-      const { data: raceData } = await supabase
-        .from('races')
-        .select('id, race_name, city_name, sprint_race_start, qualifying_start, race_start, round')
-        .eq('id', raceId)
-        .single();
-      if (raceData) {
-        setRace(raceData);
-        if (raceData.sprint_race_start) setActiveTab('sprint');
-      }
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const [q, s, r] = await Promise.all([
-          supabase.from('predictions_qualifying').select('id').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-          supabase.from('predictions_sprint').select('id').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-          supabase.from('predictions_race').select('id').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-        ]);
-        setStatus({ qualy: !!q.data, sprint: !!s.data, race: !!r.data });
-      }
-      setLoading(false);
-    }
-    getInitialData();
-  }, [raceId, supabase]);
-  useEffect(() => {
-    async function fetchGrid() {
-      setIsChangingTab(true);
-      const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
-      const isStarted = startTime && new Date(startTime) <= now;
-      if (!isStarted) {
-        setGridData([]);
-        setTimeout(() => setIsChangingTab(false), 300);
-        return;
-      }
-      const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
-      const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
-      
-      if (preds) {
-        const userIds = preds.map(p => p.user_id);
-        const { data: profiles } = await supabase.from('profiles').select('id, nickname').in('id', userIds);
-        
-        const formatted = preds.map(p => ({
-          user_id: p.user_id,
-          nickname: profiles?.find(prof => prof.id === p.user_id)?.nickname || 'Anoniem',
-          drivers: activeTab === 'qualy' ? (p.top_3_drivers || []) : activeTab === 'sprint' ? (p.top_8_drivers || []) : [...(p.top_10_drivers || []), ...(p.bottom_12_drivers || [])],
-          fastest_lap: p.fastest_lap_driver
-        }));
-        setGridData(formatted);
-      }
-      setTimeout(() => setIsChangingTab(false), 400);
-    }
-    if (race) fetchGrid();
-  }, [activeTab, race, raceId, supabase, now]);
-  const isLocked = (tab: 'sprint' | 'qualy' | 'race') => {
-    if (!race) return true;
-    const startTime = tab === 'qualy' ? race.qualifying_start : tab === 'sprint' ? race.sprint_race_start : race.race_start;
-    return !startTime || new Date(startTime) > now;
-  };
-  if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">LOADING...</div>;
-  return (
-    <div className="min-h-screen bg-[#0f111a] text-white p-4 pb-32 overflow-x-hidden">
-      <div className="max-w-2xl mx-auto">
-        <header className="mb-8">
-          <div className="flex items-baseline gap-3 mb-2">
-            <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Round {race?.round}</span>
-            <div className="h-[2px] flex-grow bg-slate-800/50"></div>
-          </div>
-          <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight italic">{race?.race_name}</h1>
-          <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
-        </header>
-        <div className="grid gap-4 mb-8">
-          {race?.sprint_race_start && (
-            <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
-          )}
-          <PredictionCard title="Qualifying" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Grand Prix" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-          
-          <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtual Standing" href={`/races/${raceId}/live`} accentColor="#005AFF" />
-        </div>
-        <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-f1 font-black italic uppercase text-white">Voorspellingen</h2>
-            <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
-              {(['sprint', 'qualy', 'race'] as const).map((t) => (
-                (t !== 'sprint' || race?.sprint_race_start) && (
-                  <button
-                    key={t}
-                    onClick={() => setActiveTab(t)}
-                    className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg scale-105' : 'text-slate-500 hover:text-white'}`}
-                  >
-                    {isLocked(t) && <span>🔒</span>} {t}
-                  </button>
-                )
-              ))}
-            </div>
-          </div>
-          <div className={`transition-opacity duration-200 ${isChangingTab ? 'opacity-0' : 'opacity-100'}`}>
-            {isLocked(activeTab) ? (
-              <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
-                <span className="text-2xl mb-2 opacity-30">🔒</span>
-                <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center px-4">Beschikbaar vanaf start sessie</h3>
-              </div>
-            ) : (
-              <div key={activeTab} className="relative overflow-x-auto scrollbar-hide -mx-2 px-2">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-3 text-[9px] font-f1 uppercase text-slate-500 min-w-[110px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
-                      {gridData[0]?.drivers.map((_, i) => (
-                        <th key={i} className="px-3 py-3 text-[9px] font-f1 uppercase text-[#e10600] text-center min-w-[65px]">P{i+1}</th>
-                      ))}
-                      {activeTab === 'race' && <th className="px-3 py-3 text-[9px] font-f1 uppercase text-blue-500 text-center min-w-[65px]">F-Lap</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/20">
-                    {gridData.length > 0 ? gridData.map((row) => (
-                      <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
-                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
-                          {row.nickname}
-                        </td>
-                        {row.drivers.map((d, i) => (
-                          <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">{d || '-'}</td>
-                        ))}
-                        {activeTab === 'race' && <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>}
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic">Laden...</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
-              <div className="flex items-center gap-2">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
-                <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-              </div>
-            </div>
-            <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40 transition-opacity duration-500" />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-              <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-            </div>
-            {isDone ? (
-              <div className="text-green-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            ) : (
-              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
+
+export default async function CalendarPage() {
+  await headers(); 
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // Haal de races op
+  const { data: races } = await supabase
+    .from('races')
+    .select('*')
+    .order('round', { ascending: true });
+
+  let allPredictions: Prediction[] = [];
+
+  if (user) {
+    // Parallel ophalen van alle voorspelling-types
+    const [racePreds, qualiPreds, sprintPreds] = await Promise.all([
+      supabase.from('predictions_race').select('race_id').eq('user_id', user.id),
+      supabase.from('predictions_qualifying').select('race_id').eq('user_id', user.id),
+      supabase.from('predictions_sprint').select('race_id').eq('user_id', user.id),
+    ]);
+
+    // Veilig data toevoegen aan de array
+    racePreds.data?.forEach(p => allPredictions.push({ race_id: p.race_id, type: 'race' }));
+    qualiPreds.data?.forEach(p => allPredictions.push({ race_id: p.race_id, type: 'qualy' }));
+    sprintPreds.data?.forEach(p => allPredictions.push({ race_id: p.race_id, type: 'sprint' }));
+  }
+
+  const formatDateRange = (fp1: string, race: string) => {
+    if (!fp1 || !race) return "";
+    const start = new Date(fp1);
+    const end = new Date(race);
+    const month = end.toLocaleDateString('nl-NL', { month: 'short' });
+    
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.getDate()}-${end.getDate()} ${month}`;
+    }
+    return `${start.getDate()} ${start.toLocaleDateString('nl-NL', { month: 'short' })} - ${end.getDate()} ${month}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0f111a] text-white p-6 md:p-12 pb-32">
+      <div className="max-w-5xl mx-auto">
+        
+        <header className="mb-12 relative">
+          <div className="w-16 md:w-24 h-1 bg-[#e10600] mb-4 shadow-[0_0_15px_rgba(225,6,0,0.5)]"></div>
+          <h1 className="font-f1 text-4xl md:text-6xl font-black italic uppercase tracking-tighter">
+            F1 Kalender <span className="text-slate-500">2026</span>
+          </h1>
+        </header>
+
+        {!races || races.length === 0 ? (
+          <div className="bg-[#161a23] border border-dashed border-slate-700 p-12 rounded-3xl text-center">
+            <p className="text-slate-500 font-medium font-f1 italic uppercase tracking-widest text-xs">De kalender wordt geladen...</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {races.map((race: Race) => {
+              const preds = allPredictions.filter(p => p.race_id === race.id);
+              
+              const hasQualy = preds.some(p => p.type === 'qualy');
+              const hasRace = preds.some(p => p.type === 'race');
+              const hasSprint = preds.some(p => p.type === 'sprint');
+              const needsSprint = !!race.sprint_race_start;
+
+              const isComplete = needsSprint 
+                ? (hasQualy && hasRace && hasSprint) 
+                : (hasQualy && hasRace);
+
+              return (
+                <Link 
+                  key={race.id} 
+                  href={`/races/${race.id}`} 
+                  className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.15)]"
+                >
+                  <div className={`absolute inset-0 transition-opacity duration-500 ${
+                    isComplete 
+                      ? 'bg-[conic-gradient(from_180deg_at_0%_50%,#22c55e_0deg,#22c55e_40deg,transparent_90deg)] opacity-100' 
+                      : 'bg-[conic-gradient(from_180deg_at_0%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40 group-hover:opacity-100'
+                  }`} />
+                  
+                  <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] p-6 h-full flex flex-col transition-colors group-hover:bg-[#1c222d]">
+                    <div className="flex justify-between items-start mb-4">
+                      <span className={`font-f1 ${isComplete ? 'text-green-500' : 'text-slate-500'} uppercase text-[10px] tracking-widest leading-none`}>
+                        Round {race.round}
+                      </span>
+                      {isComplete && (
+                        <div className="bg-green-500/20 text-green-500 p-1 rounded-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <h2 className="font-f1 text-2xl font-black italic uppercase mb-1 leading-tight tracking-tight text-white group-hover:text-[#e10600] transition-colors">
+                      {race.race_name}
+                    </h2>
+                    
+                    <div className="flex items-center gap-2 mb-8">
+                      <p className="text-slate-400 font-f1 font-black uppercase text-sm tracking-wider italic">
+                        {race.city_name}
+                      </p>
+                      <span className="text-slate-700 text-xs">•</span>
+                      <p className="text-slate-400 font-f1 text-sm font-bold uppercase tracking-widest italic">
+                        {formatDateRange(race.fp1_start, race.race_start)}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3 mt-auto relative z-10">
+                      {needsSprint && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Sprint</span>
+                          <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
+                        <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Race</span>
+                        <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className={`absolute -right-2 -bottom-4 font-f1 text-8xl font-black italic transition-colors select-none pointer-events-none opacity-[0.03] uppercase ${
+                    isComplete ? 'text-green-500' : 'text-white'
+                  }`}>
+                    {race.round}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
