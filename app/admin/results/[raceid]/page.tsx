@@ -35,10 +35,11 @@ export default function AdminResultsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // GEUPDATE: Limit naar 11 voor de race en veldnaam aangepast
   const configMap = {
     sprint: { title: "Sprint", limit: 8, table: "results_sprint", field: "top_8_drivers" },
     qualy: { title: "Qualifying", limit: 3, table: "results_qualifying", field: "top_3_drivers" },
-    race: { title: "Race", limit: 10, table: "results_race", field: "top_10_drivers" },
+    race: { title: "Race", limit: 11, table: "results_race", field: "top_11_drivers" },
   };
 
   const config = configMap[activeSession];
@@ -106,9 +107,9 @@ export default function AdminResultsPage() {
   const handleSaveAndCalculate = async () => {
     setSaving(true);
     
-    // De volledige lijst uit de UI (om ook P11 te kunnen detecteren)
+    // De volledige lijst uit de UI voor de meest accurate berekening
     const fullListIds = drivers.map(d => d.driver_id);
-    // Alleen de top X voor de database opslag
+    // De Top X (nu incl P11 voor race) voor de database opslag
     const topIdsForStorage = fullListIds.slice(0, config.limit);
 
     try {
@@ -143,7 +144,6 @@ export default function AdminResultsPage() {
         let points = 0;
 
         userPreds.forEach((driverId, index) => {
-          // AANPASSING: Gebruik fullListIds i.p.v. topIds om ook posities buiten de top 10 te vinden
           const actualPos = fullListIds.indexOf(driverId);
           
           if (activeSession === 'race') {
@@ -151,8 +151,7 @@ export default function AdminResultsPage() {
               points += 5; // Exact
             } else if (actualPos !== -1) {
               const distance = Math.abs(index - actualPos);
-              // Nu werkt dit ook voor P10 voorspelling vs P11 uitslag (afstand 1)
-              if (distance === 1) points += 2;
+              if (distance === 1) points += 2; // Werkt nu correct voor P10 pred vs P11 result
             }
           } 
           else if (activeSession === 'qualy') {
@@ -183,7 +182,7 @@ export default function AdminResultsPage() {
         if (scoreError) throw scoreError;
       }
 
-      alert(`Succes! Uitslag opgeslagen en punten berekend voor ${scoreEntries.length} deelnemers.`);
+      alert(`Succes! Top ${config.limit} opgeslagen en punten herberekend.`);
       
     } catch (err: any) {
       console.error("Fout:", err);
@@ -240,7 +239,7 @@ export default function AdminResultsPage() {
               >
                 <option value="qualy">Qualifying (Top 3)</option>
                 <option value="sprint">Sprint Race (Top 8)</option>
-                <option value="race">Main Race (Top 10)</option>
+                <option value="race">Main Race (Top 11)</option>
               </select>
             </div>
           </div>
@@ -252,7 +251,7 @@ export default function AdminResultsPage() {
             <p className="text-[10px] font-bold uppercase text-slate-400 italic">Sleep coureurs naar juiste positie</p>
           </div>
           <span className="text-[10px] font-black text-[#005AFF] uppercase tracking-widest">
-            Top {config.limit} telt mee
+            Top {config.limit} wordt vastgelegd
           </span>
         </div>
 
@@ -262,7 +261,6 @@ export default function AdminResultsPage() {
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                 {drivers.map((driver, index) => {
                   const isInPointsZone = index < config.limit;
-                  const isPos11 = index === 10; // Extra visuele indicatie voor de cruciale 11e plek
                   
                   return (
                     <Draggable key={driver.driver_id} draggableId={driver.driver_id} index={index}>
@@ -274,7 +272,6 @@ export default function AdminResultsPage() {
                           className={`flex items-center p-3 rounded-xl border transition-all ${
                             snapshot.isDragging ? "bg-[#1c222d] border-[#005AFF] shadow-2xl scale-[1.02] z-50" : 
                             isInPointsZone ? "bg-[#161a23] border-slate-800" : 
-                            isPos11 ? "bg-[#161a23]/50 border-dashed border-slate-700 opacity-80" :
                             "bg-transparent border-transparent opacity-30 grayscale"
                           }`}
                         >
