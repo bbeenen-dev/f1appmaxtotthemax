@@ -35,7 +35,6 @@ export default function AdminResultsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Configuratie mapping exact volgens jouw database velden
   const configMap = {
     sprint: { title: "Sprint", limit: 8, table: "results_sprint", field: "top_8_drivers" },
     qualy: { title: "Qualifying", limit: 3, table: "results_qualifying", field: "top_3_drivers" },
@@ -44,7 +43,6 @@ export default function AdminResultsPage() {
 
   const config = configMap[activeSession];
 
-  // 1. Haal alle races op
   useEffect(() => {
     async function getRaces() {
       const { data } = await supabase
@@ -56,7 +54,6 @@ export default function AdminResultsPage() {
     getRaces();
   }, [supabase]);
 
-  // 2. Haal coureurs en bestaande uitslag op
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -108,7 +105,11 @@ export default function AdminResultsPage() {
 
   const handleSaveAndCalculate = async () => {
     setSaving(true);
-    const topIds = drivers.slice(0, config.limit).map(d => d.driver_id);
+    
+    // De volledige lijst uit de UI (om ook P11 te kunnen detecteren)
+    const fullListIds = drivers.map(d => d.driver_id);
+    // Alleen de top X voor de database opslag
+    const topIdsForStorage = fullListIds.slice(0, config.limit);
 
     try {
       // STAP A: Sla de officiële uitslag op
@@ -116,13 +117,13 @@ export default function AdminResultsPage() {
         .from(config.table)
         .upsert({
           race_id: parseInt(currentRaceId),
-          [config.field]: topIds,
+          [config.field]: topIdsForStorage,
           updated_at: new Date().toISOString()
         }, { onConflict: 'race_id' });
 
       if (upsertError) throw upsertError;
 
-      // STAP B: Bepaal de juiste voorspellingstabel en kolom (Top X drivers)
+      // STAP B: Voorspellingen ophalen
       const predictionTable = activeSession === 'race' ? 'predictions_race' : 
                              activeSession === 'qualy' ? 'predictions_qualifying' : 'predictions_sprint';
       
@@ -136,29 +137,28 @@ export default function AdminResultsPage() {
 
       if (predError) throw predError;
 
-      // STAP C: Punten berekenen per gebruiker
+      // STAP C: Punten berekenen
       const scoreEntries = (allPredictions || []).map(pred => {
         const userPreds = (pred as any)[predictionField] as string[] || [];
         let points = 0;
 
         userPreds.forEach((driverId, index) => {
-          const actualPos = topIds.indexOf(driverId);
+          // AANPASSING: Gebruik fullListIds i.p.v. topIds om ook posities buiten de top 10 te vinden
+          const actualPos = fullListIds.indexOf(driverId);
           
           if (activeSession === 'race') {
-            // Main Race: 5pt voor exact, 2pt voor 1 plek verschil
             if (actualPos === index) {
-              points += 5;
+              points += 5; // Exact
             } else if (actualPos !== -1) {
               const distance = Math.abs(index - actualPos);
+              // Nu werkt dit ook voor P10 voorspelling vs P11 uitslag (afstand 1)
               if (distance === 1) points += 2;
             }
           } 
           else if (activeSession === 'qualy') {
-            // Qualifying: 3pt voor exact (Top 3)
             if (actualPos === index) points += 3;
           } 
           else if (activeSession === 'sprint') {
-            // Sprint: 1pt voor exact (Top 8)
             if (actualPos === index) points += 1;
           }
         });
@@ -171,7 +171,7 @@ export default function AdminResultsPage() {
         };
       });
 
-      // STAP D: Sla scores op in de juiste scoretabel
+      // STAP D: Scores opslaan
       const scoreTable = activeSession === 'race' ? 'scores_race' : 
                         activeSession === 'qualy' ? 'scores_qualifying' : 'scores_sprint';
 
@@ -202,8 +202,6 @@ export default function AdminResultsPage() {
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 md:p-8 pb-32 font-f1">
       <div className="max-w-xl mx-auto">
-        
-        {/* HEADER AREA */}
         <div className="mb-8 space-y-6">
           <div className="flex items-center justify-between">
             <button onClick={() => router.push('/admin')} className="text-slate-500 text-[10px] uppercase hover:text-[#005AFF] transition-all tracking-widest flex items-center gap-2">
@@ -248,7 +246,6 @@ export default function AdminResultsPage() {
           </div>
         </div>
 
-        {/* DRAG LIST INFO */}
         <div className="flex items-center justify-between mb-4 px-2">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 bg-[#005AFF]"></div>
@@ -259,13 +256,14 @@ export default function AdminResultsPage() {
           </span>
         </div>
 
-        {/* DRAGGABLE LIST */}
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="admin-drivers">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                 {drivers.map((driver, index) => {
                   const isInPointsZone = index < config.limit;
+                  const isPos11 = index === 10; // Extra visuele indicatie voor de cruciale 11e plek
+                  
                   return (
                     <Draggable key={driver.driver_id} draggableId={driver.driver_id} index={index}>
                       {(provided, snapshot) => (
@@ -275,7 +273,9 @@ export default function AdminResultsPage() {
                           {...provided.dragHandleProps}
                           className={`flex items-center p-3 rounded-xl border transition-all ${
                             snapshot.isDragging ? "bg-[#1c222d] border-[#005AFF] shadow-2xl scale-[1.02] z-50" : 
-                            isInPointsZone ? "bg-[#161a23] border-slate-800" : "bg-transparent border-transparent opacity-30 grayscale"
+                            isInPointsZone ? "bg-[#161a23] border-slate-800" : 
+                            isPos11 ? "bg-[#161a23]/50 border-dashed border-slate-700 opacity-80" :
+                            "bg-transparent border-transparent opacity-30 grayscale"
                           }`}
                         >
                           <div className={`w-8 font-black italic text-lg ${isInPointsZone ? "text-[#005AFF]" : "text-slate-700"}`}>
@@ -301,7 +301,6 @@ export default function AdminResultsPage() {
           </Droppable>
         </DragDropContext>
 
-        {/* FIXED FOOTER ACTION */}
         <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0f111a] via-[#0f111a] to-transparent z-[110]">
           <div className="max-w-xl mx-auto">
             <button
@@ -313,7 +312,6 @@ export default function AdminResultsPage() {
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );
