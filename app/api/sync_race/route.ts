@@ -1,22 +1,45 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
-  
-  // CONFIGURATIE: Voor de test gebruiken we de Zandvoort sessie
-  const sessionKey = 9165; 
-  const raceId = 1; // Zorg dat dit ID bestaat in je 'races' tabel
+  const { searchParams } = new URL(request.url);
+
+  // 0. BEVEILIGING: Controleer de CRON_SECRET
+  const providedKey = searchParams.get('key');
+  const expectedKey = process.env.CRON_SECRET;
+
+  if (!expectedKey || providedKey !== expectedKey) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
-    // 1. HAAL DE COUREURS OP UIT JE DATABASE (Mapping van Nummer naar ID zoals 'VER')
+    // 1. DYNAMISCHE RACE ZOEKEN
+    // We zoeken de race waarvan de datum vandaag is (of de dichtstbijzijnde actieve race)
+    const now = new Date().toISOString().split('T')[0];
+    
+    const { data: activeRace, error: raceError } = await supabase
+      .from('races')
+      .select('id, openf1_session_key')
+      .lte('race_start', now) // Datum is vandaag of in het verleden
+      .order('race_start', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (raceError || !activeRace?.openf1_session_key) {
+      throw new Error(`Geen actieve race gevonden met een OpenF1 session key.`);
+    }
+
+    const sessionKey = activeRace.openf1_session_key;
+    const raceId = activeRace.id;
+
+    // 2. HAAL DE COUREURS OP UIT JE DATABASE
     const { data: dbDrivers, error: driverError } = await supabase
       .from('drivers')
       .select('driver_id, driver_number');
 
     if (driverError) throw new Error(`Drivers ophalen mislukt: ${driverError.message}`);
 
-    // Maak een opzoek-object: { "1": "VER", "44": "HAM" }
     const numberToId: Record<string, string> = {};
     dbDrivers?.forEach(d => {
       if (d.driver_number !== null) {
@@ -24,7 +47,7 @@ export async function GET() {
       }
     });
 
-    // 2. HAAL DE LIVE DATA VAN DE OPENF1 API
+    // 3. HAAL DE LIVE DATA VAN DE OPENF1 API
     const response = await fetch(`https://api.openf1.org/v1/position?session_key=${sessionKey}`);
     const apiData = await response.json();
 
@@ -32,19 +55,19 @@ export async function GET() {
       throw new Error("Geen geldige data ontvangen van OpenF1 API");
     }
 
-    // 3. VERWERK POSITIES: Pak de laatste bekende positie per coureur
+    // 4. VERWERK POSITIES: Pak de laatste bekende positie per coureur
     const latestMap: Record<string, number> = {};
     apiData.forEach((entry: any) => {
       latestMap[String(entry.driver_number)] = entry.position;
     });
 
-    // 4. SORTEER EN VERTAAL NAAR JOUW CODES ('VER', 'SAI', etc.)
+    // 5. SORTEER EN VERTAAL NAAR JOUW CODES ('VER', 'SAI', etc.)
     const sortedIds: string[] = Object.entries(latestMap)
       .sort(([, posA], [, posB]) => posA - posB)
       .map(([num]) => numberToId[num])
-      .filter(id => id !== undefined); // Filter coureurs die niet in je DB staan
+      .filter(id => id !== undefined);
 
-    // 5. UPDATE 'actual_results' (De huidige stand op de baan)
+    // 6. UPDATE 'actual_results'
     const { error: resError } = await supabase
       .from('actual_results')
       .upsert({
@@ -55,7 +78,7 @@ export async function GET() {
 
     if (resError) throw resError;
 
-    // 6. HAAL ALLE VOORSPELLINGEN OP VOOR DEZE RACE
+    // 7. HAAL ALLE VOORSPELLINGEN OP
     const { data: allPredictions, error: predError } = await supabase
       .from('predictions_race')
       .select('user_id, top_10_drivers')
@@ -63,27 +86,20 @@ export async function GET() {
 
     if (predError) throw predError;
 
-    // 7. BEREKEN DE PUNTEN PER GEBRUIKER
+    // 8. BEREKEN DE PUNTEN PER GEBRUIKER
     const scoreEntries = (allPredictions || []).map(pred => {
       let points = 0;
-      // Forceer naar string array en filter eventuele null waardes
       const userPreds = (pred.top_10_drivers as string[]) || [];
 
       userPreds.forEach((driverId, index) => {
         if (!driverId) return;
-
-        // Zoek de index in de actuele stand (gebruik String vergelijking)
         const actualPos = sortedIds.findIndex(id => String(id) === String(driverId));
         
         if (actualPos === index) {
-          // Exacte positie match
-          points += 5;
+          points += 5; // Exact
         } else if (actualPos !== -1) {
-          // Check of ze er 1 plek naast zitten
           const distance = Math.abs(index - actualPos);
-          if (distance === 1) {
-            points += 2;
-          }
+          if (distance === 1) points += 2; // Ernaast
         }
       });
 
@@ -95,7 +111,7 @@ export async function GET() {
       };
     });
 
-    // 8. SLA DE VIRTUELE PUNTEN OP IN 'actual_scores'
+    // 9. SLA DE VIRTUELE PUNTEN OP
     if (scoreEntries.length > 0) {
       const { error: scoreError } = await supabase
         .from('actual_scores')
@@ -104,12 +120,11 @@ export async function GET() {
       if (scoreError) throw scoreError;
     }
 
-    // 9. RESULTAAT TERUGSTUREN
     return NextResponse.json({ 
       success: true, 
-      message: `Sync voltooid. ${scoreEntries.length} gebruikers gescoord.`,
-      baan_stand_p1: sortedIds[0],
-      aantal_gepusht: sortedIds.length
+      race: raceId,
+      session: sessionKey,
+      message: `Sync voltooid voor race ${raceId}.`
     });
 
   } catch (err: any) {
