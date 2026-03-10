@@ -16,31 +16,40 @@ export async function GET(request: Request) {
   try {
     // 1. DYNAMISCHE RACE ZOEKEN
     const now = new Date();
-    const nowIso = now.toISOString();
+    // We kijken ook 15 minuten in de toekomst om de komende race alvast te vinden
+    const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
     
     const { data: activeRace, error: raceError } = await supabase
       .from('races')
       .select('id, openf1_session_key, race_start')
-      .lte('race_start', nowIso) 
+      .lte('race_start', fifteenMinutesFromNow) 
       .order('race_start', { ascending: false })
       .limit(1)
       .single();
 
     if (raceError || !activeRace?.openf1_session_key) {
-      return NextResponse.json({ message: "Geen actieve race gevonden met een OpenF1 session key." });
+      return NextResponse.json({ 
+        success: true,
+        status: "IDLE",
+        message: "Geen race die binnenkort start of onlangs gestart is." 
+      });
     }
 
-    // --- GEUPDATE: TIJDSCHECK (3 UUR) ---
+    // --- TIJDSCHECK: 15 min vóór start tot 3 uur na start ---
     const raceStartTime = new Date(activeRace.race_start).getTime();
     const currentTime = now.getTime();
-    const drieUurInMilliseconden = 3 * 60 * 60 * 1000;
+    
+    const vijftienMinutenInMs = 15 * 60 * 1000;
+    const drieUurInMs = 3 * 60 * 60 * 1000;
 
-    // Als de huidige tijd meer dan 3 uur na de starttijd is, stoppen we de sync.
-    if (currentTime > raceStartTime + drieUurInMilliseconden) {
+    const isTeVroeg = currentTime < (raceStartTime - vijftienMinutenInMs);
+    const isTeLaat = currentTime > (raceStartTime + drieUurInMs);
+
+    if (isTeVroeg || isTeLaat) {
       return NextResponse.json({ 
         success: true, 
         status: "IDLE",
-        message: "Systeem in ruststand: Laatste race is langer dan 3 uur geleden gestart." 
+        message: isTeVroeg ? "Race start nog niet (buiten 15 min marge)." : "Race is al langer dan 3 uur geleden gestart." 
       });
     }
     // --- EINDE TIJDSCHECK ---
