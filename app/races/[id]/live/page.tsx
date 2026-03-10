@@ -96,9 +96,9 @@ export default async function LiveRacePage({ params }: LivePageProps) {
       </td>
       <td className="p-5">
         <div className="flex flex-col">
-          {/* We gebruiken hier nu specifiek de kolom nick_name */}
+          {/* Aangepast naar 'nickname' (zonder underscore) zoals in je view */}
           <span className="font-black uppercase text-sm italic tracking-tight text-white">
-            {user.nick_name || user.username || 'Naamloze Racer'}
+            {user.nickname || user.urer_name || 'Naamloze Racer'}
           </span>
           <span className="text-[7px] text-slate-500 uppercase tracking-widest mt-0.5">
             F1 Deelnemer
