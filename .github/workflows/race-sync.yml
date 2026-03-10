@@ -1,0 +1,14 @@
+name: F1 Live Race Sync
+
+on:
+  schedule:
+    - cron: '*/2 * * * *' # Draait elke 2 minuten
+  workflow_dispatch:      # Hiermee kun je de sync ook handmatig starten in GitHub
+
+jobs:
+  sync-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Race Sync API
+        run: |
+          curl -X GET "${{ secrets.SYNC_URL }}?key=${{ secrets.CRON_SECRET }}"
