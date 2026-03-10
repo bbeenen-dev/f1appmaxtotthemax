@@ -16,7 +16,6 @@ export async function GET(request: Request) {
   try {
     // 1. DYNAMISCHE RACE ZOEKEN
     const now = new Date();
-    // We kijken ook 15 minuten in de toekomst om de komende race alvast te vinden
     const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
     
     const { data: activeRace, error: raceError } = await supabase
@@ -38,7 +37,6 @@ export async function GET(request: Request) {
     // --- TIJDSCHECK: 15 min vóór start tot 3 uur na start ---
     const raceStartTime = new Date(activeRace.race_start).getTime();
     const currentTime = now.getTime();
-    
     const vijftienMinutenInMs = 15 * 60 * 1000;
     const drieUurInMs = 3 * 60 * 60 * 1000;
 
@@ -49,10 +47,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ 
         success: true, 
         status: "IDLE",
-        message: isTeVroeg ? "Race start nog niet (buiten 15 min marge)." : "Race is al langer dan 3 uur geleden gestart." 
+        message: isTeVroeg ? "Race start nog niet." : "Race is al langer dan 3 uur geleden gestart." 
       });
     }
-    // --- EINDE TIJDSCHECK ---
 
     const sessionKey = activeRace.openf1_session_key;
     const raceId = activeRace.id;
@@ -79,13 +76,20 @@ export async function GET(request: Request) {
       throw new Error("Geen geldige data ontvangen van OpenF1 API");
     }
 
-    // 4. VERWERK POSITIES
+    // 4. VERWERK POSITIES VOOR PUNTENTELLING (P1 t/m P20)
+    // We maken een map van DriverID -> Werkelijke Positie uit de API
+    const driverIdToActualPos: Record<string, number> = {};
     const latestMap: Record<string, number> = {};
+
     apiData.forEach((entry: any) => {
-      latestMap[String(entry.driver_number)] = entry.position;
+      const dId = numberToId[String(entry.driver_number)];
+      if (dId) {
+        driverIdToActualPos[dId] = entry.position; // Slaat bijv. 11 op voor Verstappen
+        latestMap[String(entry.driver_number)] = entry.position;
+      }
     });
 
-    // 5. SORTEER EN VERTAAL
+    // 5. SORTEER VOOR OPSLAG (Top 10 of volledig voor weergave)
     const sortedIds: string[] = Object.entries(latestMap)
       .sort(([, posA], [, posB]) => posA - posB)
       .map(([num]) => numberToId[num])
@@ -110,20 +114,26 @@ export async function GET(request: Request) {
 
     if (predError) throw predError;
 
-    // 8. BEREKEN DE PUNTEN
+    // 8. BEREKEN DE PUNTEN (Met de P11 correctie)
     const scoreEntries = (allPredictions || []).map(pred => {
       let points = 0;
       const userPreds = (pred.top_10_drivers as string[]) || [];
 
       userPreds.forEach((driverId, index) => {
         if (!driverId) return;
-        const actualPos = sortedIds.findIndex(id => String(id) === String(driverId));
         
-        if (actualPos === index) {
-          points += 5;
-        } else if (actualPos !== -1) {
-          const distance = Math.abs(index - actualPos);
-          if (distance === 1) points += 2;
+        const predictedPos = index + 1; // P1 = 1, P10 = 10
+        const actualPos = driverIdToActualPos[String(driverId)]; // Kan 1 t/m 20 zijn
+        
+        if (!actualPos) return; // Coureur niet in uitslag (DNF)
+
+        if (actualPos === predictedPos) {
+          points += 5; // EXACT: Voorspeld P10, werkelijk P10
+        } else {
+          const distance = Math.abs(predictedPos - actualPos);
+          if (distance === 1) {
+            points += 2; // ERNAAST: Voorspeld P10, werkelijk P9 OF P11
+          }
         }
       });
 
@@ -148,15 +158,11 @@ export async function GET(request: Request) {
       success: true, 
       status: "LIVE",
       race: raceId,
-      session: sessionKey,
-      message: `Sync voltooid voor race ${raceId}.`
+      message: `Sync voltooid. P1-P11 logica toegepast.`
     });
 
   } catch (err: any) {
     console.error("CRITICAL SYNC ERROR:", err.message);
-    return NextResponse.json({ 
-      success: false, 
-      error: err.message 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
