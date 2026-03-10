@@ -87,33 +87,39 @@ export default async function LiveRacePage({ params }: LivePageProps) {
                 <th className="p-5 text-right font-black">Totaal (V)</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-800/50">
-              {liveStanding.map((user, index) => (
-                <tr key={user.user_id} className="hover:bg-[#1c222d]/50 transition-colors">
-                  <td className="p-5 font-black italic text-[#005AFF] text-lg">
-                    {index + 1}
-                  </td>
-                  <td className="p-5">
-                    <div className="flex flex-col">
-                      {/* Checkt op display_name, anders username */}
-                      <span className="font-black uppercase text-sm italic tracking-tight">
-                        {user.display_name || user.username || 'Onbekende Racer'}
-                      </span>
-                      {/* Sub-text voor extra info indien nodig */}
-                      <span className="text-[7px] text-slate-600 uppercase tracking-widest">P1 Voorspelling</span>
-                    </div>
-                  </td>
-                  <td className="p-5 text-right">
-                    <div className="flex flex-col items-end">
-                      <span className="font-black text-xl italic leading-none">{user.virtualTotal}</span>
-                      <span className="text-[8px] text-green-500 font-bold uppercase tracking-tighter mt-1">
-                        +{user.currentRacePoints} live
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+  {liveStanding.map((user, index) => (
+    <tr key={user.user_id} className="hover:bg-[#1c222d]/50 transition-colors">
+      <td className="p-5 font-black italic text-[#005AFF] text-lg">
+        {index + 1}
+      </td>
+      <td className="p-5">
+        <div className="flex flex-col">
+          {/* We gebruiken hier nu specifiek de kolom nick_name */}
+          <span className="font-black uppercase text-sm italic tracking-tight text-white">
+            {user.nick_name || user.username || 'Naamloze Racer'}
+          </span>
+          <span className="text-[7px] text-slate-500 uppercase tracking-widest mt-0.5">
+            F1 Deelnemer
+          </span>
+        </div>
+      </td>
+      <td className="p-5 text-right">
+        <div className="flex flex-col items-end">
+          <span className="font-black text-xl italic leading-none">
+            {user.virtualTotal}
+          </span>
+          <span className="text-[8px] text-green-500 font-bold uppercase tracking-tighter mt-1">
+            +{user.currentRacePoints} live
+          </span>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+           
           </table>
         </div>
 
