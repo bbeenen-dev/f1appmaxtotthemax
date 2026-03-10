@@ -15,20 +15,35 @@ export async function GET(request: Request) {
 
   try {
     // 1. DYNAMISCHE RACE ZOEKEN
-    // We zoeken de race waarvan de datum vandaag is (of de dichtstbijzijnde actieve race)
-    const now = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const nowIso = now.toISOString();
     
     const { data: activeRace, error: raceError } = await supabase
       .from('races')
-      .select('id, openf1_session_key')
-      .lte('race_start', now) // Datum is vandaag of in het verleden
+      .select('id, openf1_session_key, race_start')
+      .lte('race_start', nowIso) 
       .order('race_start', { ascending: false })
       .limit(1)
       .single();
 
     if (raceError || !activeRace?.openf1_session_key) {
-      throw new Error(`Geen actieve race gevonden met een OpenF1 session key.`);
+      return NextResponse.json({ message: "Geen actieve race gevonden met een OpenF1 session key." });
     }
+
+    // --- GEUPDATE: TIJDSCHECK (3 UUR) ---
+    const raceStartTime = new Date(activeRace.race_start).getTime();
+    const currentTime = now.getTime();
+    const drieUurInMilliseconden = 3 * 60 * 60 * 1000;
+
+    // Als de huidige tijd meer dan 3 uur na de starttijd is, stoppen we de sync.
+    if (currentTime > raceStartTime + drieUurInMilliseconden) {
+      return NextResponse.json({ 
+        success: true, 
+        status: "IDLE",
+        message: "Systeem in ruststand: Laatste race is langer dan 3 uur geleden gestart." 
+      });
+    }
+    // --- EINDE TIJDSCHECK ---
 
     const sessionKey = activeRace.openf1_session_key;
     const raceId = activeRace.id;
@@ -55,13 +70,13 @@ export async function GET(request: Request) {
       throw new Error("Geen geldige data ontvangen van OpenF1 API");
     }
 
-    // 4. VERWERK POSITIES: Pak de laatste bekende positie per coureur
+    // 4. VERWERK POSITIES
     const latestMap: Record<string, number> = {};
     apiData.forEach((entry: any) => {
       latestMap[String(entry.driver_number)] = entry.position;
     });
 
-    // 5. SORTEER EN VERTAAL NAAR JOUW CODES ('VER', 'SAI', etc.)
+    // 5. SORTEER EN VERTAAL
     const sortedIds: string[] = Object.entries(latestMap)
       .sort(([, posA], [, posB]) => posA - posB)
       .map(([num]) => numberToId[num])
@@ -86,7 +101,7 @@ export async function GET(request: Request) {
 
     if (predError) throw predError;
 
-    // 8. BEREKEN DE PUNTEN PER GEBRUIKER
+    // 8. BEREKEN DE PUNTEN
     const scoreEntries = (allPredictions || []).map(pred => {
       let points = 0;
       const userPreds = (pred.top_10_drivers as string[]) || [];
@@ -96,10 +111,10 @@ export async function GET(request: Request) {
         const actualPos = sortedIds.findIndex(id => String(id) === String(driverId));
         
         if (actualPos === index) {
-          points += 5; // Exact
+          points += 5;
         } else if (actualPos !== -1) {
           const distance = Math.abs(index - actualPos);
-          if (distance === 1) points += 2; // Ernaast
+          if (distance === 1) points += 2;
         }
       });
 
@@ -122,6 +137,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
+      status: "LIVE",
       race: raceId,
       session: sessionKey,
       message: `Sync voltooid voor race ${raceId}.`
