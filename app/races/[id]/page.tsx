@@ -122,7 +122,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
       <div className="max-w-2xl mx-auto">
         <header className="mb-8">
           <div className="flex items-baseline gap-3 mb-2">
-            <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Round {race?.round}</span>
+            <span className="text-[#e10600] font-f1 font-black italic text-xl uppercase">Ronde {race?.round}</span>
             <div className="h-[2px] flex-grow bg-slate-800/50"></div>
           </div>
           <h1 className="text-5xl font-f1 font-black italic uppercase leading-tight">{race?.race_name}</h1>
@@ -133,10 +133,10 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           {race?.sprint_race_start && (
             <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
           )}
-          <PredictionCard title="Qualifying" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Grand Prix" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
+          <PredictionCard title="Kwalificatie" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
+          <PredictionCard title="Hoofd Race" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
           
-          <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtual Standing" href={`/races/${raceId}/live`} accentColor="#005AFF" />
+          <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
         </div>
 
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
