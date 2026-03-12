@@ -1,11 +1,12 @@
 "use client";
 
-import { use, useEffect, useState, useMemo } from 'react';
+import { use, useEffect, useState, useMemo, Fragment } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
 
 export const dynamic = "force-dynamic";
 
+// --- Interfaces ---
 interface RaceData {
   id: string;
   race_name: string;
@@ -27,7 +28,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   const resolvedParams = use(params);
   const raceId = resolvedParams.id;
   
-  // FIX: Memoizeer de client om herschepping bij renders te voorkomen
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -37,28 +37,43 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true);
   const [isChangingTab, setIsChangingTab] = useState(false);
   const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
-  const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
+  const [isWeekendFinished, setIsWeekendFinished] = useState(false);
+  const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race' | 'scores'>('qualy');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
 
-  // Timer voor de lock-status (beïnvloedt de data-fetch niet meer)
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 10000);
     return () => clearInterval(timer);
   }, []);
 
-  // Initiële data ophalen
   useEffect(() => {
     async function getInitialData() {
       const { data: raceData } = await supabase
         .from('races')
-        .select('id, race_name, city_name, sprint_race_start, qualifying_start, race_start, round')
+        .select('*')
         .eq('id', raceId)
         .single();
 
       if (raceData) {
         setRace(raceData);
-        if (raceData.sprint_race_start) setActiveTab('sprint');
+        
+        // Check of uitslagen bekend zijn
+        const needsSprint = !!raceData.sprint_race_start;
+        const { data: resQ } = await supabase.from('results_qualifying').select('id').eq('race_id', raceId).maybeSingle();
+        const { data: resR } = await supabase.from('results_race').select('id').eq('race_id', raceId).maybeSingle();
+        const { data: resS } = needsSprint 
+          ? await supabase.from('results_sprint').select('id').eq('race_id', raceId).maybeSingle()
+          : { data: { id: 'none' } };
+
+        const finished = !!resQ && !!resR && !!resS;
+        setIsWeekendFinished(finished);
+        
+        if (finished) {
+          setActiveTab('scores');
+        } else if (raceData.sprint_race_start) {
+          setActiveTab('sprint');
+        }
       }
 
       const { data: { session } } = await supabase.auth.getSession();
@@ -75,26 +90,20 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
     getInitialData();
   }, [raceId, supabase]);
 
-  // FIX: Deze effect-hook luistert NIET meer naar 'now' om flikkeren te voorkomen
   useEffect(() => {
     async function fetchGrid() {
+      if (activeTab === 'scores') return;
       const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
       const isStarted = startTime && new Date(startTime) <= new Date();
-
-      if (!isStarted) {
-        setGridData([]);
-        return;
-      }
+      if (!isStarted) { setGridData([]); return; }
 
       setIsChangingTab(true);
       const tableName = activeTab === 'qualy' ? 'predictions_qualifying' : activeTab === 'sprint' ? 'predictions_sprint' : 'predictions_race';
-      
       const { data: preds } = await supabase.from(tableName).select('*').eq('race_id', raceId);
       
       if (preds) {
         const userIds = preds.map(p => p.user_id);
         const { data: profiles } = await supabase.from('profiles').select('id, nickname').in('id', userIds);
-        
         const formatted = preds.map(p => ({
           user_id: p.user_id,
           nickname: profiles?.find(prof => prof.id === p.user_id)?.nickname || 'Anoniem',
@@ -105,17 +114,28 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
       }
       setIsChangingTab(false);
     }
-    
     if (race?.id) fetchGrid();
-  }, [activeTab, race?.id, raceId, supabase]); // 'now' bewust weggelaten
+  }, [activeTab, race?.id, raceId, supabase]);
 
-  const isLocked = (tab: 'sprint' | 'qualy' | 'race') => {
+  const isLocked = (tab: 'sprint' | 'qualy' | 'race' | 'scores') => {
+    if (tab === 'scores') return false;
     if (!race) return true;
     const startTime = tab === 'qualy' ? race.qualifying_start : tab === 'sprint' ? race.sprint_race_start : race.race_start;
     return !startTime || new Date(startTime) > now;
   };
 
   if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">LOADING...</div>;
+
+  // Hulp-functie om de voorspelkaarten te renderen
+  const renderPredictionCards = () => (
+    <>
+      {race?.sprint_race_start && (
+        <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
+      )}
+      <PredictionCard title="Kwalificatie" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
+      <PredictionCard title="Hoofd Race" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 pb-32 overflow-x-hidden">
@@ -129,28 +149,45 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        <div className="grid gap-4 mb-8">
-          {race?.sprint_race_start && (
-            <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
-          )}
-          <PredictionCard title="Kwalificatie" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-          <PredictionCard title="Hoofd Race" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-          
-          <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
-        </div>
+        {/* 1. MIJN SCORES KNOP (Alleen als weekend klaar is) */}
+        {isWeekendFinished && (
+          <button 
+            onClick={() => setActiveTab('scores')}
+            className="w-full mb-6 bg-green-600 hover:bg-green-500 text-white font-f1 font-black italic uppercase p-5 rounded-2xl transition-all flex justify-between items-center shadow-xl shadow-green-900/20"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-2xl">🏆</span>
+              <div className="text-left">
+                <span className="block text-sm leading-none opacity-80 mb-1">Resultaten bekend</span>
+                <span className="text-xl leading-none">Mijn Behaalde Punten</span>
+              </div>
+            </div>
+            <span className="text-2xl italic">→</span>
+          </button>
+        )}
+
+        {/* 2. KAARTEN (Alleen zichtbaar als weekend nog NIET klaar is) */}
+        {!isWeekendFinished && (
+          <div className="grid gap-4 mb-8">
+            {renderPredictionCards()}
+            <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
+          </div>
+        )}
 
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-f1 font-black italic uppercase text-white">Voorspellingen</h2>
+            <h2 className="text-xl font-f1 font-black italic uppercase text-white">
+               {activeTab === 'scores' ? 'Mijn Resultaten' : 'Voorspellingen'}
+            </h2>
             <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
-              {(['sprint', 'qualy', 'race'] as const).map((t) => (
-                (t !== 'sprint' || race?.sprint_race_start) && (
+              {(['sprint', 'qualy', 'race', 'scores'] as const).map((t) => (
+                (t === 'scores' ? isWeekendFinished : (t !== 'sprint' || race?.sprint_race_start)) && (
                   <button
                     key={t}
                     onClick={() => setActiveTab(t)}
                     className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg scale-105' : 'text-slate-500 hover:text-white'}`}
                   >
-                    {isLocked(t) && <span>🔒</span>} {t}
+                    {t === 'scores' ? '🏆' : isLocked(t) && <span>🔒</span>} {t}
                   </button>
                 )
               ))}
@@ -158,7 +195,11 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </div>
 
           <div className={`transition-opacity duration-300 ${isChangingTab ? 'opacity-50' : 'opacity-100'}`}>
-            {isLocked(activeTab) ? (
+            {activeTab === 'scores' ? (
+              <div className="py-10 text-center text-slate-500 font-f1 italic">
+                 Hier komen straks de 3 kolommen met jouw scores...
+              </div>
+            ) : isLocked(activeTab) ? (
               <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
                 <span className="text-2xl mb-2 opacity-30">🔒</span>
                 <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center px-4">Beschikbaar vanaf start sessie</h3>
@@ -188,9 +229,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic uppercase tracking-widest">
-                          Wachten op data...
-                        </td>
+                        <td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic uppercase tracking-widest">Wachten op data...</td>
                       </tr>
                     )}
                   </tbody>
@@ -199,12 +238,26 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
             )}
           </div>
         </section>
+
+        {/* 3. VOORSPELLINGSOPTIES ONDERAAN (Alleen als weekend klaar is) */}
+        {isWeekendFinished && (
+            <div className="mt-12 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xs font-f1 font-black uppercase italic text-slate-600">Mijn Inzendingen</h3>
+                    <div className="h-[1px] flex-grow bg-slate-800/40"></div>
+                </div>
+                <div className="grid gap-4 opacity-70 hover:opacity-100 transition-opacity">
+                    {renderPredictionCards()}
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Hulpsub-componenten (LiveCard & PredictionCard blijven functioneel gelijk, maar met opgeschoonde code)
+// --- De ontbrekende componenten (zorg dat deze onderaan staan) ---
+
 function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
