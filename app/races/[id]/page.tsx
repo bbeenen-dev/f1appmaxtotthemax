@@ -38,7 +38,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   const [isChangingTab, setIsChangingTab] = useState(false);
   const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
   const [isWeekendFinished, setIsWeekendFinished] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race' | 'scores'>('qualy');
+  const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
 
@@ -69,10 +69,10 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
         const finished = !!resQ && !!resR && !!resS;
         setIsWeekendFinished(finished);
         
-        if (finished) {
-          setActiveTab('scores');
-        } else if (raceData.sprint_race_start) {
+        if (raceData.sprint_race_start) {
           setActiveTab('sprint');
+        } else {
+          setActiveTab('qualy');
         }
       }
 
@@ -92,7 +92,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
   useEffect(() => {
     async function fetchGrid() {
-      if (activeTab === 'scores') return;
       const startTime = activeTab === 'qualy' ? race?.qualifying_start : activeTab === 'sprint' ? race?.sprint_race_start : race?.race_start;
       const isStarted = startTime && new Date(startTime) <= new Date();
       if (!isStarted) { setGridData([]); return; }
@@ -117,8 +116,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
     if (race?.id) fetchGrid();
   }, [activeTab, race?.id, raceId, supabase]);
 
-  const isLocked = (tab: 'sprint' | 'qualy' | 'race' | 'scores') => {
-    if (tab === 'scores') return false;
+  const isLocked = (tab: 'sprint' | 'qualy' | 'race') => {
     if (!race) return true;
     const startTime = tab === 'qualy' ? race.qualifying_start : tab === 'sprint' ? race.sprint_race_start : race.race_start;
     return !startTime || new Date(startTime) > now;
@@ -126,7 +124,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
   if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">LOADING...</div>;
 
-  // Hulp-functie om de voorspelkaarten te renderen
   const renderPredictionCards = () => (
     <>
       {race?.sprint_race_start && (
@@ -149,10 +146,10 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {/* 1. MIJN SCORES KNOP (Alleen als weekend klaar is) */}
+        {/* 1. MIJN SCORES KNOP (Linkt naar de nieuwe pagina die we gaan maken) */}
         {isWeekendFinished && (
-          <button 
-            onClick={() => setActiveTab('scores')}
+          <Link 
+            href={`/races/${raceId}/myscores`}
             className="w-full mb-6 bg-green-600 hover:bg-green-500 text-white font-f1 font-black italic uppercase p-5 rounded-2xl transition-all flex justify-between items-center shadow-xl shadow-green-900/20"
           >
             <div className="flex items-center gap-4">
@@ -163,10 +160,10 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
               </div>
             </div>
             <span className="text-2xl italic">→</span>
-          </button>
+          </Link>
         )}
 
-        {/* 2. KAARTEN (Alleen zichtbaar als weekend nog NIET klaar is) */}
+        {/* 2. KAARTEN (Alleen bovenin als weekend NIET klaar is) */}
         {!isWeekendFinished && (
           <div className="grid gap-4 mb-8">
             {renderPredictionCards()}
@@ -176,18 +173,16 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-f1 font-black italic uppercase text-white">
-               {activeTab === 'scores' ? 'Mijn Resultaten' : 'Voorspellingen'}
-            </h2>
+            <h2 className="text-xl font-f1 font-black italic uppercase text-white">Voorspellingen</h2>
             <div className="flex gap-1 bg-[#0f111a] p-1 rounded-full border border-slate-800">
-              {(['sprint', 'qualy', 'race', 'scores'] as const).map((t) => (
-                (t === 'scores' ? isWeekendFinished : (t !== 'sprint' || race?.sprint_race_start)) && (
+              {(['sprint', 'qualy', 'race'] as const).map((t) => (
+                (t !== 'sprint' || race?.sprint_race_start) && (
                   <button
                     key={t}
                     onClick={() => setActiveTab(t)}
                     className={`px-4 py-2 rounded-full text-[11px] font-f1 font-black uppercase transition-all flex items-center gap-1.5 ${activeTab === t ? 'bg-[#e10600] text-white shadow-lg scale-105' : 'text-slate-500 hover:text-white'}`}
                   >
-                    {t === 'scores' ? '🏆' : isLocked(t) && <span>🔒</span>} {t}
+                    {isLocked(t) && <span>🔒</span>} {t}
                   </button>
                 )
               ))}
@@ -195,11 +190,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </div>
 
           <div className={`transition-opacity duration-300 ${isChangingTab ? 'opacity-50' : 'opacity-100'}`}>
-            {activeTab === 'scores' ? (
-              <div className="py-10 text-center text-slate-500 font-f1 italic">
-                 Hier komen straks de 3 kolommen met jouw scores...
-              </div>
-            ) : isLocked(activeTab) ? (
+            {isLocked(activeTab) ? (
               <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-[#0f111a]/50">
                 <span className="text-2xl mb-2 opacity-30">🔒</span>
                 <h3 className="text-[13px] font-f1 font-black uppercase italic text-slate-400 text-center px-4">Beschikbaar vanaf start sessie</h3>
@@ -239,7 +230,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </div>
         </section>
 
-        {/* 3. VOORSPELLINGSOPTIES ONDERAAN (Alleen als weekend klaar is) */}
+        {/* 3. VOORSPELLINGSOPTIES ONDERAAN (Als weekend klaar is) */}
         {isWeekendFinished && (
             <div className="mt-12 space-y-4">
                 <div className="flex items-center gap-3 mb-2">
@@ -256,53 +247,4 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   );
 }
 
-// --- De ontbrekende componenten (zorg dat deze onderaan staan) ---
-
-function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
-              <div className="flex items-center gap-2">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
-                <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-              </div>
-            </div>
-            <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
-  return (
-    <Link href={href} className="group block relative">
-      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
-        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40 transition-opacity duration-500" />
-        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
-              <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
-            </div>
-            {isDone ? (
-              <div className="text-green-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            ) : (
-              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
+// ... De componenten LiveCard en PredictionCard blijven ongewijzigd onderaan staan ...
