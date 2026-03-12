@@ -90,7 +90,7 @@ export default function Leaderboard() {
   return (
     <section className="relative">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-1 h-6 bg-[#e10600]"></div>
+        
         <h2 className="font-f1 text-2xl font-black italic uppercase tracking-tighter text-white">
           F1 <span className="text-[#e10600]">Stand</span>
         </h2>
