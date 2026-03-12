@@ -146,7 +146,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {/* 1. MIJN SCORES KNOP (Linkt naar de nieuwe pagina die we gaan maken) */}
+        {/* 1. MIJN SCORES KNOP */}
         {isWeekendFinished && (
           <Link 
             href={`/races/${raceId}/myscores`}
@@ -247,4 +247,53 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   );
 }
 
-// ... De componenten LiveCard en PredictionCard blijven ongewijzigd onderaan staan ...
+// --- DEZE COMPONENTEN MOETEN ONDERAAN STAAN OM DE FOUT OP TE LOSSEN ---
+
+function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 opacity-10 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `conic-gradient(from_180deg_at_0%_50%, ${accentColor} 0deg, ${accentColor} 40deg, transparent_90deg)` }} />
+        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-f1 font-black italic uppercase leading-none mb-1 text-white group-hover:text-[#005AFF] transition-colors">{title}</h2>
+              <div className="flex items-center gap-2">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-[#005AFF] animate-pulse"></span>
+                <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+              </div>
+            </div>
+            <span className="text-[#005AFF] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function PredictionCard({ title, subtitle, href, isDone, accentColor }: { title: string, subtitle: string, href: string, isDone: boolean, accentColor: string }) {
+  return (
+    <Link href={href} className="group block relative">
+      <div className="relative p-[1px] rounded-xl overflow-hidden transition-all duration-500">
+        <div className="absolute inset-0 bg-[#e10600] opacity-5 group-hover:opacity-40 transition-opacity duration-500" />
+        <div className="relative bg-[#161a23] p-5 rounded-[calc(0.75rem-1px)] transition-colors group-hover:bg-[#1c222d]">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className={`text-xl font-f1 font-black italic uppercase transition-colors ${isDone ? 'text-green-500' : 'text-white group-hover:text-[#e10600]'}`}>{title}</h2>
+              <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">{subtitle}</p>
+            </div>
+            {isDone ? (
+              <div className="text-green-500">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
+              <span className="text-[#e10600] text-xl font-f1 font-black italic opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">→</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
