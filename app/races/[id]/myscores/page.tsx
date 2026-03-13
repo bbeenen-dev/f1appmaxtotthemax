@@ -41,7 +41,8 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         supabase.from('predictions_qualifying').select('top_3_drivers').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
         supabase.from('results_qualifying').select('top_3_drivers').eq('race_id', raceId).maybeSingle(),
         supabase.from('predictions_race').select('top_10_drivers').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-        supabase.from('results_race').select('top_10_drivers, p11_driver').eq('race_id', raceId).maybeSingle(),
+        // Hier aangepast naar top_11_drivers
+        supabase.from('results_race').select('top_11_drivers').eq('race_id', raceId).maybeSingle(),
         supabase.from('predictions_sprint').select('top_8_drivers').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
         supabase.from('results_sprint').select('top_8_drivers').eq('race_id', raceId).maybeSingle(),
         supabase.from('scores_qualifying').select('points').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
@@ -53,7 +54,7 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
 
       const finalSections: ScoreSection[] = [];
 
-      // SPRINT
+      // SPRINT & KWALIFICATIE (Logica ongewijzigd)
       if (sP.data?.top_8_drivers) {
         const res = sR.data?.top_8_drivers || [];
         finalSections.push({
@@ -68,7 +69,6 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         });
       }
 
-      // KWALIFICATIE
       if (qP.data?.top_3_drivers) {
         const res = qR.data?.top_3_drivers || [];
         finalSections.push({
@@ -83,33 +83,32 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         });
       }
 
-      // HOOFDRACE
+      // HOOFDRACE - Nu met top_11_drivers logica
       if (rP.data?.top_10_drivers) {
-        const res = rR.data?.top_10_drivers || [];
-        const p11Res = rR.data?.p11_driver;
-        
+        const fullRes = rR.data?.top_11_drivers || []; // Bevat P1 t/m P11
+        const p11Res = fullRes[10]; // De 11e coureur (index 10)
+
         const raceRows: ScoreRow[] = rP.data.top_10_drivers.map((d: string, i: number) => {
           const predPos = i + 1;
-          const actualPos = res.indexOf(d) + 1;
+          // Zoek de werkelijke positie in de volledige lijst van 11
+          const actualPos = fullRes.indexOf(d) + 1;
           
           let p = 0;
-          if (d === res[i]) {
-            p = 5;
+          if (d === fullRes[i]) {
+            p = 5; // Exacte match (P1 t/m P10)
           } else if (actualPos > 0 && Math.abs(predPos - actualPos) === 1) {
-            p = 2;
-          } else if (predPos === 10 && d === p11Res) {
-            p = 2; // P11 correctie
+            p = 2; // Ernaast (inclusief als voorspelde P10 werkelijk P11 is)
           }
 
           return {
             posLabel: `P${predPos}`,
             prediction: d,
-            actual: res[i] || "-",
+            actual: fullRes[i] || "-",
             points: p
           };
         });
 
-        // P11 Informatieve rij toevoegen
+        // Voeg P11 rij toe als info
         if (p11Res) {
           raceRows.push({
             posLabel: "P11",
