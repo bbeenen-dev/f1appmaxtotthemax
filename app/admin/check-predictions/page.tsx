@@ -12,7 +12,7 @@ interface Profile {
 interface Race {
   id: number;
   race_name: string;
-  has_sprint: boolean; // Toegevoegd om sprint status te weten
+  has_sprint: boolean;
 }
 
 interface PredictionStatus {
@@ -36,7 +36,6 @@ export default function CheckPredictionsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 1. Haal alle races op inclusief has_sprint
   useEffect(() => {
     async function init() {
       const { data: raceData } = await supabase
@@ -52,18 +51,15 @@ export default function CheckPredictionsPage() {
     init();
   }, [supabase]);
 
-  // 2. Check de status zodra de race-selectie wijzigt
   useEffect(() => {
     if (!selectedRaceId) return;
 
     async function checkStatus() {
       setLoading(true);
       
-      // Update of dit een sprintweekend is
       const currentRace = races.find(r => r.id.toString() === selectedRaceId);
       setIsSprintWeekend(currentRace?.has_sprint || false);
 
-      // Haal alle deelnemers op
       const { data: users, error: userError } = await supabase
         .from("profiles")
         .select("id, nickname")
@@ -71,7 +67,6 @@ export default function CheckPredictionsPage() {
 
       if (userError) console.error("Fout bij ophalen profiles:", userError);
       
-      // Haal alle bestaande voorspellingen op
       const [qualy, sprint, race] = await Promise.all([
         supabase.from("predictions_qualifying").select("user_id").eq("race_id", selectedRaceId),
         supabase.from("predictions_sprint").select("user_id").eq("race_id", selectedRaceId),
@@ -131,10 +126,11 @@ export default function CheckPredictionsPage() {
             <thead>
               <tr className="bg-white/5 border-b border-slate-800">
                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic">Deelnemer</th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic text-center">Qualy</th>
+                {/* VOLGORDE GEWIJZIGD: Eerst Sprint (indien aanwezig), dan Qualy, dan Race */}
                 {isSprintWeekend && (
                   <th className="p-4 text-[10px] font-black uppercase text-[#005AFF] italic text-center">Sprint</th>
                 )}
+                <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic text-center">Qualy</th>
                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 italic text-center">Race</th>
               </tr>
             </thead>
@@ -153,10 +149,11 @@ export default function CheckPredictionsPage() {
                       <p className="font-black uppercase italic text-sm text-white group-hover:text-[#005AFF] transition-colors">{user.user_name}</p>
                       <p className="text-[7px] text-slate-600 font-mono uppercase tracking-tighter italic">ID: {user.user_id.slice(0,8)}...</p>
                     </td>
-                    <td className="p-4 text-center">{StatusIcon(user.hasQualy)}</td>
+                    {/* VOLGORDE GEWIJZIGD IN BODY */}
                     {isSprintWeekend && (
                       <td className="p-4 text-center">{StatusIcon(user.hasSprint)}</td>
                     )}
+                    <td className="p-4 text-center">{StatusIcon(user.hasQualy)}</td>
                     <td className="p-4 text-center">{StatusIcon(user.hasRace)}</td>
                   </tr>
                 ))
