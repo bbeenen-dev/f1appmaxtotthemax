@@ -48,17 +48,24 @@ export default async function InfoPage() {
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <p className="text-4xl font-f1 italic font-black uppercase">
-                    €10 <span className="text-white text-xl italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
+                     <span className="text-white text-xl italic font-bold tracking-normal lowercase ml-2">€10 per deelnemer</span>
                   </p>
-                  <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic max-w-2xl border-l-2 border-[#e10600] pl-6">
-                    De prijzenpot van 130 euro wordt beheerd door Boudewijn in een Bitcoin Wallet
-                    <br />
-                    <span className="text-white not-italic font-bold">Verdeling prijzenpot:</span>
-                    <br />
-                    80% Winnaar 
-                    <br />
-                    20% Runner-up 
-                  </p>
+                  <div className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic max-w-2xl">
+                    <p className="mb-4">De prijzenpot van 130 euro wordt beheerd door Boudewijn in een Bitcoin Wallet</p>
+                    
+                    <p className="text-white not-italic font-bold uppercase tracking-wider text-sm mb-3">Verdeling prijzenpot:</p>
+                    
+                    <ul className="space-y-2 not-italic">
+                      <li className="flex items-center gap-3">
+                        <span className="w-2 h-2 bg-[#e10600] rounded-full shadow-[0_0_5px_#e10600]"></span>
+                        <span>80% Winnaar</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <span className="w-2 h-2 bg-[#e10600] rounded-full shadow-[0_0_5px_#e10600]"></span>
+                        <span>20% Runner-up</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
