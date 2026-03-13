@@ -41,7 +41,6 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         supabase.from('predictions_qualifying').select('top_3_drivers').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
         supabase.from('results_qualifying').select('top_3_drivers').eq('race_id', raceId).maybeSingle(),
         supabase.from('predictions_race').select('top_10_drivers').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
-        // Hier aangepast naar top_11_drivers
         supabase.from('results_race').select('top_11_drivers').eq('race_id', raceId).maybeSingle(),
         supabase.from('predictions_sprint').select('top_8_drivers').eq('race_id', raceId).eq('user_id', session.user.id).maybeSingle(),
         supabase.from('results_sprint').select('top_8_drivers').eq('race_id', raceId).maybeSingle(),
@@ -54,14 +53,13 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
 
       const finalSections: ScoreSection[] = [];
 
-      // SPRINT & KWALIFICATIE (Logica ongewijzigd)
       if (sP.data?.top_8_drivers) {
         const res = sR.data?.top_8_drivers || [];
         finalSections.push({
           title: "Sprint Race",
           totalPoints: sS.data?.points || 0,
           rows: sP.data.top_8_drivers.map((d: string, i: number) => ({
-            posLabel: `P${i + 1}`,
+            posLabel: `${i + 1}`,
             prediction: d,
             actual: res[i] || "-",
             points: d === res[i] ? 1 : 0
@@ -75,7 +73,7 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
           title: "Kwalificatie",
           totalPoints: qS.data?.points || 0,
           rows: qP.data.top_3_drivers.map((d: string, i: number) => ({
-            posLabel: `P${i + 1}`,
+            posLabel: `${i + 1}`,
             prediction: d,
             actual: res[i] || "-",
             points: d === res[i] ? 3 : 0
@@ -83,35 +81,32 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         });
       }
 
-      // HOOFDRACE - Nu met top_11_drivers logica
       if (rP.data?.top_10_drivers) {
-        const fullRes = rR.data?.top_11_drivers || []; // Bevat P1 t/m P11
-        const p11Res = fullRes[10]; // De 11e coureur (index 10)
+        const fullRes = rR.data?.top_11_drivers || [];
+        const p11Res = fullRes[10];
 
         const raceRows: ScoreRow[] = rP.data.top_10_drivers.map((d: string, i: number) => {
           const predPos = i + 1;
-          // Zoek de werkelijke positie in de volledige lijst van 11
           const actualPos = fullRes.indexOf(d) + 1;
           
           let p = 0;
           if (d === fullRes[i]) {
-            p = 5; // Exacte match (P1 t/m P10)
+            p = 5;
           } else if (actualPos > 0 && Math.abs(predPos - actualPos) === 1) {
-            p = 2; // Ernaast (inclusief als voorspelde P10 werkelijk P11 is)
+            p = 2;
           }
 
           return {
-            posLabel: `P${predPos}`,
+            posLabel: `${predPos}`,
             prediction: d,
             actual: fullRes[i] || "-",
             points: p
           };
         });
 
-        // Voeg P11 rij toe als info
         if (p11Res) {
           raceRows.push({
-            posLabel: "P11",
+            posLabel: "11",
             prediction: "-",
             actual: p11Res,
             points: 0
@@ -134,50 +129,50 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
   if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">SCORES LADEN...</div>;
 
   return (
-    <div className="min-h-screen bg-[#0f111a] text-white p-4 font-f1 pb-20">
+    <div className="min-h-screen bg-[#0f111a] text-white p-4 font-f1 pb-20 uppercase">
       <div className="max-w-2xl mx-auto">
         <Link href={`/races/${raceId}`} className="text-[#e10600] italic uppercase text-[10px] mb-8 inline-block hover:opacity-70 transition-opacity tracking-widest">
           ← TERUG NAAR RACE
         </Link>
         
-        <header className="mb-12 border-b-2 border-white/10 pb-6">
-          <h1 className="text-4xl font-black italic uppercase text-white leading-none">{raceName}</h1>
-          <p className="text-[#e10600] uppercase italic text-xs mt-2 tracking-widest font-bold">Mijn Resultaten</p>
+        <header className="mb-8 border-b-2 border-white/10 pb-6">
+          <h1 className="text-3xl font-black italic text-white leading-none">{raceName}</h1>
+          <p className="text-[#e10600] text-[10px] mt-2 tracking-widest font-bold">Mijn Resultaten</p>
         </header>
 
-        <div className="space-y-16">
+        <div className="space-y-12">
           {sections.map((section, idx) => (
             <section key={idx}>
-              <div className="flex justify-between items-end mb-4 px-2">
-                <h2 className="text-xl font-black italic uppercase tracking-tight text-white">{section.title}</h2>
+              <div className="flex justify-between items-end mb-3 px-1">
+                <h2 className="text-lg font-black italic tracking-tight text-white">{section.title}</h2>
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Totaal Score</span>
-                  <span className="text-3xl font-black italic text-[#e10600] leading-none">{section.totalPoints}</span>
+                  <span className="text-[9px] text-slate-500 font-bold tracking-widest">TOTAAL</span>
+                  <span className="text-2xl font-black italic text-[#e10600] leading-none">{section.totalPoints}</span>
                 </div>
               </div>
 
-              <div className="bg-[#161a23] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+              <div className="bg-[#161a23] rounded-xl overflow-hidden border border-white/10 shadow-2xl">
                 <table className="w-full text-left table-fixed border-collapse">
                   <thead>
-                    <tr className="text-[10px] uppercase text-slate-400 bg-white/5 border-b border-white/10">
-                      <th className="p-4 w-20">Pos</th>
-                      <th className="p-4 w-1/3">Voorspelling</th>
-                      <th className="p-4 w-1/3">Uitslag</th>
-                      <th className="p-4 text-right">Punten</th>
+                    <tr className="text-[10px] text-slate-400 bg-white/5 border-b border-white/10">
+                      <th className="py-3 px-2 w-10 text-center">#</th>
+                      <th className="py-3 px-2 w-[40%]">VOORSPELLD</th>
+                      <th className="py-3 px-2 w-[40%]">UITSLAG</th>
+                      <th className="py-3 px-2 w-10 text-center text-[#e10600]">P</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 uppercase italic font-bold">
+                  <tbody className="divide-y divide-white/5 italic font-bold">
                     {section.rows.map((row, i) => (
                       <tr key={i} className="hover:bg-white/[0.03] transition-colors">
-                        <td className="p-4 text-white text-sm font-black italic">{row.posLabel}</td>
-                        <td className="p-4 text-sm text-white tracking-wide">
+                        <td className="py-4 px-2 text-white text-xs font-black text-center">{row.posLabel}</td>
+                        <td className="py-4 px-2 text-xs text-white tracking-tight truncate">
                           {row.prediction}
                         </td>
-                        <td className="p-4 text-sm text-slate-500 font-medium">
+                        <td className="py-4 px-2 text-xs text-slate-500 font-medium truncate">
                           {row.actual}
                         </td>
-                        <td className={`p-4 text-right font-black text-lg ${row.points > 0 ? 'text-green-500' : 'text-white/20'}`}>
-                          {row.points > 0 ? `+${row.points}` : '0'}
+                        <td className={`py-4 px-2 text-center font-black text-sm ${row.points > 0 ? 'text-green-500' : 'text-white/10'}`}>
+                          {row.points > 0 ? row.points : '0'}
                         </td>
                       </tr>
                     ))}
