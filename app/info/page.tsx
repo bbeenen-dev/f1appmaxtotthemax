@@ -47,8 +47,8 @@ export default async function InfoPage() {
               {/* Box 1: Inzet & Verdeling */}
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <p className="text-4xl font-f1 italic font-black uppercase">
-                     <span className="text-white text-xl italic font-bold tracking-normal lowercase ml-2">€10 per deelnemer</span>
+                  <p className="text-4xl font-f1 italic font-black uppercase text-white">
+                    €10 <span className="text-white text-xl italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
                   </p>
                   <div className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic max-w-2xl">
                     <p className="mb-4">De prijzenpot van 130 euro wordt beheerd door Boudewijn in een Bitcoin Wallet</p>
@@ -106,7 +106,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Sprint Race</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">Top 8 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 8 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   1 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per goede voorspelling</span>
@@ -117,7 +117,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Kwalificatie</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">Top 3 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 3 correct voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   3 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per goede voorspelling</span>
@@ -128,7 +128,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div className="flex-1">
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Grand Prix</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">Top 10 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 10 correct voorspellen</p>
                 </div>
                 <div className="flex flex-col items-start gap-1">
                   <p className="font-f1 font-black italic uppercase text-xl text-white">
@@ -144,7 +144,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Seizoen Bonus</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-white mt-1">WDC & WCC Titels</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">WDC & WCC Titels</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   25 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per titel</span>
