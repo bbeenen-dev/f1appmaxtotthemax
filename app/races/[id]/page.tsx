@@ -58,7 +58,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
       if (raceData) {
         setRace(raceData);
         
-        // Check of uitslagen bekend zijn
         const needsSprint = !!raceData.sprint_race_start;
         const { data: resQ } = await supabase.from('results_qualifying').select('id').eq('race_id', raceId).maybeSingle();
         const { data: resR } = await supabase.from('results_race').select('id').eq('race_id', raceId).maybeSingle();
@@ -146,7 +145,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {/* 1. MIJN SCORES KNOP */}
         {isWeekendFinished && (
           <Link 
             href={`/races/${raceId}/myscores`}
@@ -163,7 +161,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </Link>
         )}
 
-        {/* 2. KAARTEN (Alleen bovenin als weekend NIET klaar is) */}
         {!isWeekendFinished && (
           <div className="grid gap-4 mb-8">
             {renderPredictionCards()}
@@ -200,27 +197,30 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-3 text-[9px] font-f1 uppercase text-slate-500 min-w-[110px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
+                      {/* HEADERS VERGROOT */}
+                      <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 uppercase text-slate-500 min-w-[120px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
                       {gridData[0]?.drivers.map((_, i) => (
-                        <th key={i} className="px-3 py-3 text-[9px] font-f1 uppercase text-[#e10600] text-center min-w-[65px]">P{i+1}</th>
+                        <th key={i} className="px-3 py-4 text-xs font-f1 uppercase text-[#e10600] text-center font-black min-w-[70px]">P{i+1}</th>
                       ))}
-                      {activeTab === 'race' && <th className="px-3 py-3 text-[9px] font-f1 uppercase text-blue-500 text-center min-w-[65px]">F-Lap</th>}
+                      {activeTab === 'race' && <th className="px-3 py-4 text-xs font-f1 uppercase text-blue-500 text-center font-black min-w-[70px]">F-Lap</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/20">
                     {gridData.length > 0 ? gridData.map((row) => (
                       <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
-                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
+                        {/* NICKNAMES IETS GROTER */}
+                        <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-5 text-sm font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
                           {row.nickname}
                         </td>
+                        {/* DRIVER CODES VERGROOT NAAR TEXT-XS */}
                         {row.drivers.map((d, i) => (
-                          <td key={i} className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-slate-400">{d || '-'}</td>
+                          <td key={i} className="px-3 py-5 text-xs font-f1 font-bold text-center uppercase text-slate-300 tracking-wider">{d || '-'}</td>
                         ))}
-                        {activeTab === 'race' && <td className="px-3 py-4 text-[10px] font-f1 font-bold text-center uppercase text-blue-400">{row.fastest_lap || '-'}</td>}
+                        {activeTab === 'race' && <td className="px-3 py-5 text-xs font-f1 font-bold text-center uppercase text-blue-400 tracking-wider">{row.fastest_lap || '-'}</td>}
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={15} className="py-10 text-center text-[10px] text-slate-500 font-f1 italic uppercase tracking-widest">Wachten op data...</td>
+                        <td colSpan={15} className="py-10 text-center text-xs text-slate-500 font-f1 italic uppercase tracking-widest">Wachten op data...</td>
                       </tr>
                     )}
                   </tbody>
@@ -230,7 +230,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </div>
         </section>
 
-        {/* 3. VOORSPELLINGSOPTIES ONDERAAN (Als weekend klaar is) */}
         {isWeekendFinished && (
             <div className="mt-12 space-y-4">
                 <div className="flex items-center gap-3 mb-2">
