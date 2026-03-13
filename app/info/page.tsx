@@ -106,7 +106,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Sprint Race</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 8 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 8 goed voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   1 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per goede voorspelling</span>
@@ -117,7 +117,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div>
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Kwalificatie</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 3 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 3 goed voorspellen</p>
                 </div>
                 <p className="font-f1 font-black italic uppercase text-xl text-white">
                   3 PT <span className="text-slate-500 text-sm tracking-normal font-bold ml-1">per goede voorspelling</span>
@@ -128,7 +128,7 @@ export default async function InfoPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-8">
                 <div className="flex-1">
                   <h3 className="font-f1 text-xl font-black italic uppercase text-[#e10600]">Grand Prix</h3>
-                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 10 correct voorspellen</p>
+                  <p className="text-lg uppercase font-black tracking-[0.15em] text-slate-400 mt-1">Top 10 goed voorspellen</p>
                 </div>
                 <div className="flex flex-col items-start gap-1">
                   <p className="font-f1 font-black italic uppercase text-xl text-white">
