@@ -141,12 +141,6 @@ export default async function InfoPage() {
           </section>
 
         </div>
-
-        <footer className="mt-32 pb-12 opacity-30">
-          <p className="text-white text-[10px] uppercase tracking-[0.6em] font-black italic text-center">
-            F1 Prediction League 2026
-          </p>
-        </footer>
       </div>
     </div>
   );
