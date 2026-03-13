@@ -50,9 +50,9 @@ export default async function InfoPage() {
                   <p className="text-4xl font-f1 italic font-black uppercase">
                     €10 <span className="text-white text-xl italic font-bold tracking-normal lowercase ml-2">per deelnemer</span>
                   </p>
-                  <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
-                    De prijzenpot wordt door Boudwijn beheerd in Bitcoin (BTC)
-                  </p>
+                  <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic max-w-2xl border-l-2 border-[#e10600] pl-6">
+            De prijzenpot van 130 euro wordt beheerd door Boudewijn in een Bitcoin Wallet!
+          </p>
                 </div>
                 <p className="text-base uppercase font-black tracking-[0.15em] text-slate-300">
                     Verdeling prijzenpot: 80% Winnaar 20% Runner-up
