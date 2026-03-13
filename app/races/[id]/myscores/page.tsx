@@ -53,6 +53,7 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
 
       const finalSections: ScoreSection[] = [];
 
+      // SPRINT
       if (sP.data?.top_8_drivers) {
         const res = sR.data?.top_8_drivers || [];
         finalSections.push({
@@ -67,6 +68,7 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         });
       }
 
+      // KWALIFICATIE
       if (qP.data?.top_3_drivers) {
         const res = qR.data?.top_3_drivers || [];
         finalSections.push({
@@ -81,6 +83,7 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
         });
       }
 
+      // HOOFDRACE
       if (rP.data?.top_10_drivers) {
         const fullRes = rR.data?.top_11_drivers || [];
         const p11Res = fullRes[10];
@@ -126,7 +129,11 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
     fetchData();
   }, [raceId, supabase]);
 
-  if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">SCORES LADEN...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#0f111a] flex flex-col items-center justify-center font-f1 italic">
+      <div className="text-[#e10600] text-xl font-black animate-pulse">SCORES LADEN...</div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 font-f1 pb-20 uppercase">
@@ -154,24 +161,26 @@ export default function MyScoresPage({ params }: { params: Promise<{ id: string 
               <div className="bg-[#161a23] rounded-xl overflow-hidden border border-white/10 shadow-2xl">
                 <table className="w-full text-left table-fixed border-collapse">
                   <thead>
-                    <tr className="text-[10px] text-slate-400 bg-white/5 border-b border-white/10">
-                      <th className="py-3 px-2 w-10 text-center">#</th>
-                      <th className="py-3 px-2 w-[40%]">VOORSPELLD</th>
-                      <th className="py-3 px-2 w-[40%]">UITSLAG</th>
-                      <th className="py-3 px-2 w-10 text-center text-[#e10600]">P</th>
+                    <tr className="text-xs uppercase text-slate-400 bg-white/5 border-b border-white/10 font-black">
+                      <th className="py-4 px-1 w-12 text-center">#</th>
+                      <th className="py-4 px-1 w-[38%]">VOORSPELLING</th>
+                      <th className="py-4 px-1 w-[38%]">UITSLAG</th>
+                      <th className="py-4 px-1 w-12 text-center text-[#e10600]">P</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 italic font-bold">
                     {section.rows.map((row, i) => (
                       <tr key={i} className="hover:bg-white/[0.03] transition-colors">
-                        <td className="py-4 px-2 text-white text-xs font-black text-center">{row.posLabel}</td>
-                        <td className="py-4 px-2 text-xs text-white tracking-tight truncate">
+                        <td className="py-4 px-1 text-white text-sm font-black text-center">
+                          {row.posLabel}
+                        </td>
+                        <td className="py-4 px-1 text-sm text-white tracking-tight truncate uppercase">
                           {row.prediction}
                         </td>
-                        <td className="py-4 px-2 text-xs text-slate-500 font-medium truncate">
+                        <td className="py-4 px-1 text-sm text-slate-500 font-medium truncate uppercase">
                           {row.actual}
                         </td>
-                        <td className={`py-4 px-2 text-center font-black text-sm ${row.points > 0 ? 'text-green-500' : 'text-white/10'}`}>
+                        <td className={`py-4 px-1 text-center font-black text-base ${row.points > 0 ? 'text-green-500' : 'text-white/10'}`}>
                           {row.points > 0 ? row.points : '0'}
                         </td>
                       </tr>
