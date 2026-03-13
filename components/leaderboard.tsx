@@ -82,29 +82,35 @@ export default function Leaderboard() {
   }, [supabase]);
 
   if (loading) return (
-    <div className="bg-[#161a23] rounded-3xl p-10 text-center animate-pulse text-slate-500 uppercase italic text-[10px] border border-white/5 font-f1">
-      Stand laden...
+    <div className="bg-[#161a23] rounded-3xl p-10 text-center animate-pulse text-slate-500 uppercase italic text-xs border border-white/5 font-f1">
+      WK Matrix opbouwen...
     </div>
   );
 
   return (
-    <section className="relative">
-      <div className="flex items-center gap-3 mb-6">
-        <h2 className="font-f1 text-2xl font-black italic uppercase tracking-tighter text-white">
-          F1 <span className="text-[#e10600]">Stand</span>
-        </h2>
-      </div>
+    <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-2xl">
+      {/* De subtiele gradiënt rand die past bij de rest van de homepagina */}
+      <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
+      
+      <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] overflow-hidden border border-white/5 transition-all">
+        
+        {/* TITEL SECTIE - Nu binnen het segment */}
+        <div className="p-6 pb-2 border-b border-white/5">
+          <h2 className="font-f1 text-2xl font-black italic uppercase tracking-tighter text-white leading-none">
+            F1 <span className="text-[#e10600]">Stand</span>
+          </h2>
+          <p className="text-[10px] text-slate-500 uppercase font-bold mt-2 tracking-widest italic">
+            Algemeen klassement & sessie overzicht
+          </p>
+        </div>
 
-      <div className="bg-[#161a23] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+        {/* TABEL SECTIE */}
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left border-separate border-spacing-0 min-w-max">
             <thead>
               <tr className="bg-white/5 text-xs font-f1 uppercase tracking-widest text-slate-400">
-                {/* Kolom #: versmald naar w-10 */}
                 <th className="sticky left-0 z-20 bg-[#1c212c] py-4 px-2 font-black w-10 text-center border-b border-white/5">#</th>
-                {/* Kolom NAAM: links aangepast naar left-10 */}
-                <th className="sticky left-10 z-20 bg-[#1c212c] py-4 px-4 font-black min-w-[130px] border-b border-white/5 text-slate-400">NAAM</th>
-                {/* Kolom TOT: links aangepast (10 + 130 + padding = 170px ongeveer) */}
+                <th className="sticky left-10 z-20 bg-[#1c212c] py-4 px-4 font-black min-w-[130px] border-b border-white/5">NAAM</th>
                 <th className="sticky left-[170px] z-20 bg-[#222834] py-4 px-4 text-center font-black text-yellow-500 border-b border-white/5">TOT</th>
                 
                 {activeRaces.map(race => (
@@ -169,10 +175,14 @@ export default function Leaderboard() {
             </tbody>
           </table>
         </div>
+        
+        {/* LEGENDA - Ook binnen de kaart voor een opgeruimd geheel */}
+        <div className="bg-black/20 p-3">
+          <p className="text-[10px] text-slate-600 uppercase font-black italic text-right px-4 tracking-widest">
+            S = Sprint | Q = Qualy | R = Race
+          </p>
+        </div>
       </div>
-      <p className="text-[10px] text-slate-600 uppercase font-black italic mt-4 text-right px-4 tracking-widest">
-        S = Sprint | Q = Qualy | R = Race
-      </p>
     </section>
   );
 }
