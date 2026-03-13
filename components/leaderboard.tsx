@@ -82,7 +82,7 @@ export default function Leaderboard() {
   }, [supabase]);
 
   if (loading) return (
-    <div className="bg-[#161a23] rounded-3xl p-10 text-center animate-pulse text-slate-500 uppercase italic text-[10px] border border-white/5">
+    <div className="bg-[#161a23] rounded-3xl p-10 text-center animate-pulse text-slate-500 uppercase italic text-[10px] border border-white/5 font-f1">
       Stand laden...
     </div>
   );
@@ -99,23 +99,24 @@ export default function Leaderboard() {
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left border-separate border-spacing-0 min-w-max">
             <thead>
-              <tr className="bg-white/5 text-[9px] font-f1 uppercase tracking-widest text-slate-500">
-                <th className="sticky left-0 z-20 bg-[#1c212c] py-4 px-4 font-black w-12 text-center border-b border-white/5">Pos</th>
-                {/* Verbreed van 100px naar 130px voor o.a. Max Verstappen */}
-                <th className="sticky left-12 z-20 bg-[#1c212c] py-4 px-3 font-black min-w-[130px] border-b border-white/5">Speler</th>
-                {/* Left aangepast op basis van nieuwe breedte spelerkolom */}
-                <th className="sticky left-[178px] z-20 bg-[#222834] py-4 px-4 text-center font-black text-yellow-500 border-b border-white/5">Totaal</th>
+              <tr className="bg-white/5 text-xs font-f1 uppercase tracking-widest text-slate-400">
+                {/* Kolom #: versmald naar w-10 */}
+                <th className="sticky left-0 z-20 bg-[#1c212c] py-4 px-2 font-black w-10 text-center border-b border-white/5">#</th>
+                {/* Kolom NAAM: links aangepast naar left-10 */}
+                <th className="sticky left-10 z-20 bg-[#1c212c] py-4 px-4 font-black min-w-[130px] border-b border-white/5 text-slate-400">NAAM</th>
+                {/* Kolom TOT: links aangepast (10 + 130 + padding = 170px ongeveer) */}
+                <th className="sticky left-[170px] z-20 bg-[#222834] py-4 px-4 text-center font-black text-yellow-500 border-b border-white/5">TOT</th>
                 
                 {activeRaces.map(race => (
-                  <th key={race.id} colSpan={race.has_sprint ? 3 : 2} className="py-4 px-2 text-center border-l border-white/10 font-black text-white bg-black/20 border-b border-white/5">
+                  <th key={race.id} colSpan={race.has_sprint ? 3 : 2} className="py-4 px-2 text-center border-l border-white/10 font-black text-white bg-black/20 border-b border-white/5 text-sm tracking-tighter">
                     {race.slug}
                   </th>
                 ))}
               </tr>
               <tr className="text-sm font-f1 uppercase text-slate-500 bg-black/10">
                 <th className="sticky left-0 z-20 bg-[#1c212c] border-b border-white/5"></th>
-                <th className="sticky left-12 z-20 bg-[#1c212c] border-b border-white/5"></th>
-                <th className="sticky left-[178px] z-20 bg-[#222834] border-b border-white/5"></th>
+                <th className="sticky left-10 z-20 bg-[#1c212c] border-b border-white/5"></th>
+                <th className="sticky left-[170px] z-20 bg-[#222834] border-b border-white/5"></th>
                 {activeRaces.map(race => (
                   <Fragment key={`sub-${race.id}`}>
                     {race.has_sprint && <th className="py-2 text-center border-l border-white/10 w-12 text-orange-400 border-b border-white/5 font-black text-base">S</th>}
@@ -129,19 +130,19 @@ export default function Leaderboard() {
             <tbody className="divide-y divide-white/5">
               {entries.map((index_entry, index) => (
                 <tr key={index_entry.user_id} className="hover:bg-white/5 transition-colors group">
-                  <td className="sticky left-0 z-10 bg-[#161a23] py-4 px-4 text-center border-b border-white/5 group-hover:bg-[#1c222d]">
+                  <td className="sticky left-0 z-10 bg-[#161a23] py-4 px-2 text-center border-b border-white/5 group-hover:bg-[#1c222d]">
                     <span className={`font-f1 italic font-black text-xs ${
                       index === 0 ? "text-yellow-500" : index === 1 ? "text-slate-300" : index === 2 ? "text-orange-400" : "text-slate-600"
                     }`}>
                       {index + 1}
                     </span>
                   </td>
-                  <td className="sticky left-12 z-10 bg-[#161a23] py-4 px-3 border-b border-white/5 group-hover:bg-[#1c222d]">
+                  <td className="sticky left-10 z-10 bg-[#161a23] py-4 px-4 border-b border-white/5 group-hover:bg-[#1c222d]">
                     <p className="font-f1 font-black italic uppercase text-xs tracking-tight text-white">
                       {index_entry.nickname || index_entry.urer_name || "Coureur"}
                     </p>
                   </td>
-                  <td className="sticky left-[178px] z-10 bg-[#1c212c] py-4 px-4 text-center font-f1 font-black italic text-sm text-white border-b border-white/5 group-hover:bg-[#222834]">
+                  <td className="sticky left-[170px] z-10 bg-[#1c212c] py-4 px-4 text-center font-f1 font-black italic text-sm text-white border-b border-white/5 group-hover:bg-[#222834]">
                     {index_entry.grand_total || 0}
                   </td>
 
