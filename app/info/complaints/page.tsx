@@ -14,9 +14,9 @@ export default function ComplaintsPage() {
         </header>
 
         <div className="relative rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-8">
-          {/* Vervang /complaints.jpg door de juiste naam van je bestand in de public map */}
+          
           <img 
-            src="/max_finger.jpg" 
+            src="/max_finger.JPG" 
             alt="Klachtenloket"
             className="w-full h-auto"
           />
