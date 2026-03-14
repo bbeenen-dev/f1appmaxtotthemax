@@ -99,9 +99,7 @@ export default function Leaderboard() {
           <h2 className="font-f1 text-xl font-black italic uppercase tracking-tighter text-white leading-none">
             F1 <span className="text-[#e10600]">Stand</span>
           </h2>
-          <p className="text-[9px] text-slate-500 uppercase font-bold mt-1 tracking-widest italic">
-            Nieuwste resultaten vooraan
-          </p>
+         
         </div>
 
         <div className="overflow-x-auto overflow-y-hidden">
