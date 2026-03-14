@@ -11,7 +11,11 @@ interface Race {
   city_name: string;
   race_start: string;
   fp1_start: string;
+  fp2_start: string;
+  fp3_start: string;
+  qualifying_start: string;
   sprint_race_start?: string;
+  has_sprint: boolean;
 }
 
 interface Prediction {
@@ -23,7 +27,6 @@ export default function CalendarPage() {
   const [races, setRaces] = useState<Race[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
-  // We gebruiken deze ref om de container te vinden waarin we scrollen
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const supabase = createBrowserClient(
@@ -56,14 +59,12 @@ export default function CalendarPage() {
     fetchData();
   }, []);
 
-  // Scroll naar de eerstvolgende race zodra de data geladen is
   useEffect(() => {
     if (!loading && races.length > 0) {
       const now = new Date();
       const nextRaceIndex = races.findIndex(r => new Date(r.race_start) > now);
       
       if (nextRaceIndex !== -1) {
-        // Gebruik een kleine timeout om te zorgen dat de DOM volledig is opgebouwd
         setTimeout(() => {
           const element = document.getElementById(`race-card-${races[nextRaceIndex].id}`);
           if (element) {
@@ -73,6 +74,26 @@ export default function CalendarPage() {
       }
     }
   }, [loading, races]);
+
+  // Helper voor tijdnotatie met correcte tijdzone conversie
+  const formatSessionTime = (dateStr: string | null) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    
+    const day = date.toLocaleDateString('nl-NL', { 
+      weekday: 'short', 
+      timeZone: 'Europe/Amsterdam' 
+    }).replace('.', '');
+
+    const time = date.toLocaleTimeString('nl-NL', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: false,
+      timeZone: 'Europe/Amsterdam' 
+    });
+
+    return `${day.charAt(0).toUpperCase() + day.slice(1)} ${time}`;
+  };
 
   const formatDateRange = (fp1: string, race: string) => {
     if (!fp1 || !race) return "";
@@ -92,7 +113,6 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white flex flex-col">
-      {/* STICKY HEADER - Blijft bovenaan staan */}
       <header className="sticky top-0 z-[60] bg-[#0f111a]/90 backdrop-blur-xl border-b border-white/10 p-6 md:p-10 shadow-2xl">
         <div className="max-w-5xl mx-auto">
           <div className="w-16 md:w-24 h-1 bg-[#e10600] mb-4 shadow-[0_0_15px_rgba(225,6,0,0.5)]"></div>
@@ -102,7 +122,6 @@ export default function CalendarPage() {
         </div>
       </header>
 
-      {/* RACES LIJST - Scrollt normaal onder de header */}
       <main className="flex-1 p-6 md:p-12 pb-32">
         <div className="max-w-5xl mx-auto grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {races.map((race: Race) => {
@@ -110,7 +129,7 @@ export default function CalendarPage() {
             const hasQualy = preds.some(p => p.type === 'qualy');
             const hasRace = preds.some(p => p.type === 'race');
             const hasSprint = preds.some(p => p.type === 'sprint');
-            const needsSprint = !!race.sprint_race_start;
+            const needsSprint = race.has_sprint;
             const isComplete = needsSprint ? (hasQualy && hasRace && hasSprint) : (hasQualy && hasRace);
 
             return (
@@ -120,7 +139,6 @@ export default function CalendarPage() {
                 href={`/races/${race.id}`} 
                 className="group relative p-[1px] rounded-3xl transition-all duration-500 overflow-hidden block hover:shadow-[0_0_20px_rgba(225,6,0,0.15)]"
               >
-                {/* De vertrouwde gradiënt rand */}
                 <div className={`absolute inset-0 transition-opacity duration-500 ${
                   isComplete 
                     ? 'bg-[conic-gradient(from_180deg_at_0%_50%,#22c55e_0deg,#22c55e_40deg,transparent_90deg)] opacity-100' 
@@ -145,14 +163,55 @@ export default function CalendarPage() {
                     {race.race_name}
                   </h2>
                   
-                  <div className="flex items-center gap-2 mb-8">
-                    <p className="text-slate-400 font-f1 font-black uppercase text-sm tracking-wider italic">
+                  <div className="flex items-center gap-2 mb-4">
+                    <p className="text-slate-400 font-f1 font-black uppercase text-xs tracking-wider italic">
                       {race.city_name}
                     </p>
                     <span className="text-slate-700 text-xs">•</span>
-                    <p className="text-slate-400 font-f1 text-sm font-bold uppercase tracking-widest italic">
+                    <p className="text-slate-400 font-f1 text-[10px] font-bold uppercase tracking-widest italic">
                       {formatDateRange(race.fp1_start, race.race_start)}
                     </p>
+                  </div>
+
+                  {/* TIJDENSCHEMA GRID - Toegevoegd zoals in de NextEventCard */}
+                  <div className="grid grid-cols-5 gap-1 mb-8 pt-4 border-t border-white/5">
+                    <div className="flex flex-col">
+                      <span className="text-[7px] text-slate-500 uppercase font-black">FP1</span>
+                      <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp1_start)}</span>
+                    </div>
+
+                    {race.has_sprint ? (
+                      <>
+                        <div className="flex flex-col">
+                          <span className="text-[7px] text-orange-500 uppercase font-black">SQ</span>
+                          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp2_start)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[7px] text-orange-500 uppercase font-black">Sprint</span>
+                          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.sprint_race_start || null)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-col">
+                          <span className="text-[7px] text-slate-500 uppercase font-black">FP2</span>
+                          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp2_start)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[7px] text-slate-500 uppercase font-black">FP3</span>
+                          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp3_start)}</span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="flex flex-col">
+                      <span className="text-[7px] text-[#e10600] uppercase font-black">Qualy</span>
+                      <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.qualifying_start)}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[7px] text-[#e10600] uppercase font-black">Race</span>
+                      <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.race_start)}</span>
+                    </div>
                   </div>
 
                   <div className="flex gap-3 mt-auto relative z-10">
