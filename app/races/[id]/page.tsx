@@ -110,11 +110,11 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {/* SUBTIELE SCORE KNOP (ZONDER ICOON) */}
+        {/* UITSLAGEN EN SCORES (GROENE RAND) */}
         {hasAnyResults && (
           <Link href={`/races/${raceId}/myscores`} className="w-full mb-8 group relative block">
             <div className="absolute inset-0 bg-green-500/5 blur-xl group-hover:bg-green-500/10 transition-all duration-500" />
-            <div className="relative bg-[#161a23] border border-green-500/20 group-hover:border-green-500/50 p-5 rounded-2xl transition-all duration-300 shadow-2xl overflow-hidden">
+            <div className="relative bg-[#161a23] border-2 border-green-500/60 group-hover:border-green-400 p-5 rounded-2xl transition-all duration-300 shadow-2xl overflow-hidden">
               <div className="flex justify-between items-center">
                 <div className="text-left">
                   <span className="block text-white font-f1 font-black italic uppercase text-xl leading-none mb-1 group-hover:text-green-400 transition-colors">Uitslagen en mijn scores</span>
@@ -122,15 +122,24 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                     {isWeekendFinished ? "Volledig weekend afgerond" : "Voor zover bekend"}
                   </span>
                 </div>
-                <span className="text-green-400 text-xl font-f1 font-black italic">→</span>
+                <span className="text-green-400 text-xl font-f1 font-black italic transform group-hover:translate-x-1 transition-transform">→</span>
               </div>
             </div>
           </Link>
         )}
 
-        {/* MENU EN VOORSPELLINGEN */}
+        {/* VOORSPELLINGEN LIJST */}
         <div className="grid gap-4 mb-8">
-          {/* MENU ITEM VOOR ALLE VOORSPELLINGEN (ZONDER ICOON) */}
+          {!resultsAvailable.sprint && renderCard('sprint')}
+          {!resultsAvailable.qualy && renderCard('qualy')}
+          {!resultsAvailable.race && renderCard('race')}
+          
+          {/* LIVE TRACKER */}
+          {!isWeekendFinished && (
+            <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
+          )}
+
+          {/* ALLE VOORSPELLINGEN (NU ONDERAAN) */}
           <Link href={`/races/${raceId}/grid`} className="group block relative">
              <div className="relative bg-[#161a23] p-5 rounded-xl border border-slate-800 group-hover:border-[#e10600]/50 transition-all">
                 <div className="flex justify-between items-center">
@@ -142,14 +151,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                 </div>
              </div>
           </Link>
-
-          {!resultsAvailable.sprint && renderCard('sprint')}
-          {!resultsAvailable.qualy && renderCard('qualy')}
-          {!resultsAvailable.race && renderCard('race')}
-          
-          {!isWeekendFinished && (
-            <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
-          )}
         </div>
 
         {/* ARCHIEF SECTIE */}
