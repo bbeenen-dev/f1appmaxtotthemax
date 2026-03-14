@@ -44,12 +44,26 @@ export default async function NextEventCard() {
   const needsSprint = !!race.has_sprint;
   const isComplete = needsSprint ? (hasQualy && hasRace && hasSprint) : (hasQualy && hasRace);
 
-  // Helper voor tijdnotatie (bijv: Vr 14:30)
+  /**
+   * Helper voor tijdnotatie met correcte tijdzone conversie (Europa/Amsterdam)
+   * Dit lost het probleem op waarbij tijden 1 of 2 uur te vroeg werden getoond.
+   */
   const formatSessionTime = (dateStr: string | null) => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
-    const day = date.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
-    const time = date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    
+    const day = date.toLocaleDateString('nl-NL', { 
+      weekday: 'short', 
+      timeZone: 'Europe/Amsterdam' 
+    }).replace('.', '');
+
+    const time = date.toLocaleTimeString('nl-NL', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: false,
+      timeZone: 'Europe/Amsterdam' 
+    });
+
     return `${day.charAt(0).toUpperCase() + day.slice(1)} ${time}`;
   };
 
@@ -94,44 +108,44 @@ export default async function NextEventCard() {
         </div>
       </div>
 
-      {/* NIEUW: TIJDENSCHEMA SECTIE */}
+      {/* TIJDENSCHEMA SECTIE - Lettertype vergroot naar text-xs en tijdzone-proof */}
       <div className="grid grid-cols-5 gap-1 mb-6 relative z-10 border-t border-white/5 pt-4">
         <div className="flex flex-col">
           <span className="text-[7px] text-slate-500 uppercase font-black">FP1</span>
-          <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.fp1_start)}</span>
+          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp1_start)}</span>
         </div>
 
         {race.has_sprint ? (
           <>
             <div className="flex flex-col">
               <span className="text-[7px] text-orange-500 uppercase font-black">SQ</span>
-              <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.fp2_start)}</span>
+              <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp2_start)}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[7px] text-orange-500 uppercase font-black">Sprint</span>
-              <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.sprint_race_start)}</span>
+              <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.sprint_race_start)}</span>
             </div>
           </>
         ) : (
           <>
             <div className="flex flex-col">
               <span className="text-[7px] text-slate-500 uppercase font-black">FP2</span>
-              <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.fp2_start)}</span>
+              <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp2_start)}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[7px] text-slate-500 uppercase font-black">FP3</span>
-              <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.fp3_start)}</span>
+              <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.fp3_start)}</span>
             </div>
           </>
         )}
 
         <div className="flex flex-col">
           <span className="text-[7px] text-[#e10600] uppercase font-black">Qualy</span>
-          <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.qualifying_start)}</span>
+          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.qualifying_start)}</span>
         </div>
         <div className="flex flex-col">
           <span className="text-[7px] text-[#e10600] uppercase font-black">Race</span>
-          <span className="text-[10px] text-white font-f1 italic font-bold">{formatSessionTime(race.race_start)}</span>
+          <span className="text-xs text-white font-f1 italic font-bold">{formatSessionTime(race.race_start)}</span>
         </div>
       </div>
 
