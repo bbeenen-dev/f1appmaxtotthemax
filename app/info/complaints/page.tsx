@@ -1,5 +1,6 @@
+"use client"; // Deze regel lost het probleem op!
+
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function ComplaintsPage() {
   return (
@@ -14,15 +15,13 @@ export default function ComplaintsPage() {
         </header>
 
         <div className="relative rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-8 bg-[#161a23]">
-          {/* We gebruiken hier de gewone img omdat we in de public map zitten, 
-              maar dubbelcheck de naam exact! */}
           <img 
             src="/max_finger.JPG" 
             alt="Klachtenloket"
             className="w-full h-auto block"
+            // De onError is nu veilig omdat we "use client" gebruiken
             onError={(e) => {
-              // Kleine truc om te zien of het een hoofdletterfout is
-              console.log("Plaatje niet gevonden, check je bestandsnaam in /public");
+              console.error("Afbeelding niet gevonden. Check of /public/max_finger.JPG bestaat.");
             }}
           />
         </div>
