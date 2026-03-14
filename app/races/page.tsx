@@ -16,6 +16,7 @@ interface Race {
   qualifying_start: string;
   sprint_race_start?: string;
   has_sprint: boolean;
+  status: string; // Nieuwe kolom toegevoegd
 }
 
 interface Prediction {
@@ -37,7 +38,13 @@ export default function CalendarPage() {
   useEffect(() => {
     async function fetchData() {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: racesData } = await supabase.from('races').select('*').order('round', { ascending: true });
+      
+      // Filter direct in de query op status 'scheduled'
+      const { data: racesData } = await supabase
+        .from('races')
+        .select('*')
+        .eq('status', 'scheduled') 
+        .order('round', { ascending: true });
       
       if (racesData) setRaces(racesData);
 
@@ -75,7 +82,6 @@ export default function CalendarPage() {
     }
   }, [loading, races]);
 
-  // Helper voor tijdnotatie met correcte tijdzone conversie
   const formatSessionTime = (dateStr: string | null) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
@@ -173,7 +179,6 @@ export default function CalendarPage() {
                     </p>
                   </div>
 
-                  {/* TIJDENSCHEMA GRID - Toegevoegd zoals in de NextEventCard */}
                   <div className="grid grid-cols-5 gap-1 mb-8 pt-4 border-t border-white/5">
                     <div className="flex flex-col">
                       <span className="text-[7px] text-slate-500 uppercase font-black">FP1</span>
