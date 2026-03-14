@@ -139,7 +139,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
   if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">LOADING...</div>;
 
-  // Helper om te bepalen welke kaart waar getoond moet worden
   const renderCard = (type: 'sprint' | 'qualy' | 'race') => {
     if (type === 'sprint' && race?.sprint_race_start) {
         return <PredictionCard key="sprint" title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />;
@@ -165,31 +164,48 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
+        {/* SUBTIELE SCORE KNOP */}
         {hasAnyResults && (
           <Link 
             href={`/races/${raceId}/myscores`}
-            className="w-full mb-6 bg-green-600 hover:bg-green-500 text-white font-f1 font-black italic uppercase p-5 rounded-2xl transition-all flex justify-between items-center shadow-xl shadow-green-900/20"
+            className="w-full mb-8 group relative block"
           >
-            <div className="flex items-center gap-4">
-              <span className="text-2xl">🏆</span>
-              <div className="text-left">
-                <span className="block text-sm leading-none opacity-80 mb-1">
-                    {isWeekendFinished ? "Resultaten definitief" : "Tussentijdse scores beschikbaar"}
-                </span>
-                <span className="text-xl leading-none">Mijn Behaalde Punten</span>
+            <div className="absolute inset-0 bg-green-500/5 blur-xl group-hover:bg-green-500/10 transition-all duration-500" />
+            
+            <div className="relative bg-[#161a23] border border-green-500/20 group-hover:border-green-500/50 p-5 rounded-2xl transition-all duration-300 shadow-2xl overflow-hidden">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-4xl italic font-black font-f1">F1</span>
+                </div>
+                
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300 border border-green-500/20">
+                    🏆
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-white font-f1 font-black italic uppercase text-xl leading-none mb-1 group-hover:text-green-400 transition-colors">
+                      Uitslagen en mijn scores
+                    </span>
+                    <span className="block text-slate-500 font-f1 uppercase text-[10px] tracking-widest italic font-bold">
+                      {isWeekendFinished ? "Volledig weekend afgerond" : "Voor zover bekend"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   <span className="hidden sm:inline text-green-500/50 group-hover:text-green-400 font-f1 font-black italic text-xs transition-all transform group-hover:translate-x-1">DETAILS →</span>
+                   <span className="sm:hidden text-green-400 text-xl">→</span>
+                </div>
               </div>
             </div>
-            <span className="text-2xl italic">→</span>
           </Link>
         )}
 
-        {/* ACTIEVE VOORSPELLINGEN: Alleen tonen als er nog GEEN resultaat voor is */}
+        {/* ACTIEVE VOORSPELLINGEN */}
         <div className="grid gap-4 mb-8">
           {!resultsAvailable.sprint && renderCard('sprint')}
           {!resultsAvailable.qualy && renderCard('qualy')}
           {!resultsAvailable.race && renderCard('race')}
           
-          {/* Live tracker altijd bovenin zolang het weekend nog bezig is */}
           {!isWeekendFinished && (
             <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
           )}
@@ -254,7 +270,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </div>
         </section>
 
-        {/* ARCHIEF SECTIE: Items die al een resultaat hebben verhuizen naar hier */}
+        {/* ARCHIEF SECTIE */}
         {hasAnyResults && (
             <div className="mt-12 space-y-4">
                 <div className="flex items-center gap-3 mb-2">
