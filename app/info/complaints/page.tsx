@@ -13,17 +13,22 @@ export default function ComplaintsPage() {
           <div className="w-20 h-1 bg-[#e10600] mx-auto shadow-[0_0_10px_rgba(225,6,0,0.5)]"></div>
         </header>
 
-        <div className="relative rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-8">
-          
+        <div className="relative rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-8 bg-[#161a23]">
+          {/* We gebruiken hier de gewone img omdat we in de public map zitten, 
+              maar dubbelcheck de naam exact! */}
           <img 
             src="/max_finger.JPG" 
             alt="Klachtenloket"
-            className="w-full h-auto"
+            className="w-full h-auto block"
+            onError={(e) => {
+              // Kleine truc om te zien of het een hoofdletterfout is
+              console.log("Plaatje niet gevonden, check je bestandsnaam in /public");
+            }}
           />
         </div>
 
         <p className="font-f1 italic font-black uppercase text-xl text-slate-400 mb-10 leading-tight">
-          Bedankt voor je feedback. <br/>We doen er helemaal niets mee.
+          Bedankt voor je feedback! <br/>
         </p>
 
         <Link 
