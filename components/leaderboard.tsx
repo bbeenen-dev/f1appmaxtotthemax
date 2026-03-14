@@ -37,8 +37,6 @@ export default function Leaderboard() {
     async function fetchFullLeaderboard() {
       setLoading(true);
       
-      // 1. Haal alle races op, chronologisch gesorteerd (oud naar nieuw)
-      // De filter op 'race_start' is verwijderd zodat races met vroege scores altijd zichtbaar zijn
       const { data: races } = await supabase
         .from("races")
         .select("id, slug, has_sprint, race_start")
@@ -56,7 +54,6 @@ export default function Leaderboard() {
       ]);
 
       if (board && races) {
-        // 2. Filter races: toon alleen de races waarvoor daadwerkelijk scores bestaan
         const filteredRaces = races.filter(race => {
           const hasQ = qScores.data?.some(s => s.race_id === race.id);
           const hasR = rScores.data?.some(s => s.race_id === race.id);
@@ -111,7 +108,8 @@ export default function Leaderboard() {
               <tr className="bg-white/5 text-xs font-f1 uppercase tracking-widest text-slate-400">
                 <th className="sticky left-0 z-20 bg-[#1c212c] py-4 px-2 font-black w-10 text-center border-b border-white/5">#</th>
                 <th className="sticky left-10 z-20 bg-[#1c212c] py-4 px-4 font-black min-w-[130px] border-b border-white/5">NAAM</th>
-                <th className="sticky left-[170px] z-20 bg-[#222834] py-4 px-4 text-center font-black text-yellow-500 border-b border-white/5">TOT</th>
+                {/* Groen kader en TOT kleur in header */}
+                <th className="sticky left-[170px] z-20 bg-[#222834] py-4 px-4 text-center font-black text-green-400 border-b border-white/5 border-r-2 border-green-500/50 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)]">TOT</th>
                 
                 {activeRaces.map(race => (
                   <th key={race.id} colSpan={race.has_sprint ? 3 : 2} className="py-4 px-2 text-center border-l border-white/10 font-black text-white bg-black/20 border-b border-white/5 text-sm tracking-tighter">
@@ -122,7 +120,7 @@ export default function Leaderboard() {
               <tr className="text-sm font-f1 uppercase text-slate-500 bg-black/10">
                 <th className="sticky left-0 z-20 bg-[#1c212c] border-b border-white/5"></th>
                 <th className="sticky left-10 z-20 bg-[#1c212c] border-b border-white/5"></th>
-                <th className="sticky left-[170px] z-20 bg-[#222834] border-b border-white/5"></th>
+                <th className="sticky left-[170px] z-20 bg-[#222834] border-b border-white/5 border-r-2 border-green-500/50"></th>
                 {activeRaces.map(race => (
                   <Fragment key={`sub-${race.id}`}>
                     {race.has_sprint && <th className="py-2 text-center border-l border-white/10 w-12 text-orange-400 border-b border-white/5 font-black text-base">S</th>}
@@ -148,7 +146,8 @@ export default function Leaderboard() {
                       {index_entry.nickname || index_entry.urer_name || "Coureur"}
                     </p>
                   </td>
-                  <td className="sticky left-[170px] z-10 bg-[#1c212c] py-4 px-4 text-center font-f1 font-black italic text-sm text-white border-b border-white/5 group-hover:bg-[#222834]">
+                  {/* Totaal kolom met groen kader en groene tekst */}
+                  <td className="sticky left-[170px] z-10 bg-[#1c212c] py-4 px-4 text-center font-f1 font-black italic text-sm text-green-400 border-b border-white/5 border-r-2 border-green-500/50 group-hover:bg-[#222834] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)]">
                     {index_entry.grand_total || 0}
                   </td>
 
