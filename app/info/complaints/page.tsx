@@ -16,7 +16,7 @@ export default function ComplaintsPage() {
 
         <div className="relative rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-8 bg-[#161a23]">
           <img 
-            src="/max_finger.JPG" 
+            src="/max_finger.jpg" 
             alt="Klachtenloket"
             className="w-full h-auto block"
             // De onError is nu veilig omdat we "use client" gebruiken
