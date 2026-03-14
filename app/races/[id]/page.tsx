@@ -110,22 +110,19 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {/* SUBTIELE SCORE KNOP */}
+        {/* SUBTIELE SCORE KNOP (ZONDER ICOON) */}
         {hasAnyResults && (
           <Link href={`/races/${raceId}/myscores`} className="w-full mb-8 group relative block">
             <div className="absolute inset-0 bg-green-500/5 blur-xl group-hover:bg-green-500/10 transition-all duration-500" />
             <div className="relative bg-[#161a23] border border-green-500/20 group-hover:border-green-500/50 p-5 rounded-2xl transition-all duration-300 shadow-2xl overflow-hidden">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-2xl border border-green-500/20">🏆</div>
-                  <div className="text-left">
-                    <span className="block text-white font-f1 font-black italic uppercase text-xl leading-none mb-1 group-hover:text-green-400 transition-colors">Uitslagen en mijn scores</span>
-                    <span className="block text-slate-500 font-f1 uppercase text-[10px] tracking-widest italic font-bold">
-                      {isWeekendFinished ? "Volledig weekend afgerond" : "Voor zover bekend"}
-                    </span>
-                  </div>
+                <div className="text-left">
+                  <span className="block text-white font-f1 font-black italic uppercase text-xl leading-none mb-1 group-hover:text-green-400 transition-colors">Uitslagen en mijn scores</span>
+                  <span className="block text-slate-500 font-f1 uppercase text-[10px] tracking-widest italic font-bold">
+                    {isWeekendFinished ? "Volledig weekend afgerond" : "Voor zover bekend"}
+                  </span>
                 </div>
-                <span className="text-green-400 text-xl">→</span>
+                <span className="text-green-400 text-xl font-f1 font-black italic">→</span>
               </div>
             </div>
           </Link>
@@ -133,16 +130,13 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
         {/* MENU EN VOORSPELLINGEN */}
         <div className="grid gap-4 mb-8">
-          {/* MENU ITEM VOOR ALLE VOORSPELLINGEN */}
+          {/* MENU ITEM VOOR ALLE VOORSPELLINGEN (ZONDER ICOON) */}
           <Link href={`/races/${raceId}/grid`} className="group block relative">
              <div className="relative bg-[#161a23] p-5 rounded-xl border border-slate-800 group-hover:border-[#e10600]/50 transition-all">
                 <div className="flex justify-between items-center">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-slate-800/50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📋</div>
-                      <div>
-                         <h2 className="text-xl font-f1 font-black italic uppercase text-white group-hover:text-[#e10600] transition-colors">Alle Voorspellingen</h2>
-                         <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">Bekijk wat anderen hebben gekozen</p>
-                      </div>
+                   <div>
+                      <h2 className="text-xl font-f1 font-black italic uppercase text-white group-hover:text-[#e10600] transition-colors">Alle Voorspellingen</h2>
+                      <p className="text-slate-400 text-[10px] font-f1 uppercase tracking-[0.2em]">Bekijk wat anderen hebben gekozen</p>
                    </div>
                    <span className="text-[#e10600] text-xl font-f1 font-black italic transform group-hover:translate-x-1 transition-transform">→</span>
                 </div>
@@ -177,8 +171,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   );
 }
 
-// --- DE HELPERS (DIE ONTBRASKEN) ---
-
+// --- HELPERS ---
 function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
