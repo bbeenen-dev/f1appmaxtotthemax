@@ -54,6 +54,7 @@ export default function Leaderboard() {
       ]);
 
       if (board && races) {
+        // Filter races waar al scores voor zijn (of die gestart zijn)
         const filteredRaces = races.filter(race => {
           const hasQ = qScores.data?.some(s => s.race_id === race.id);
           const hasR = rScores.data?.some(s => s.race_id === race.id);
@@ -61,7 +62,8 @@ export default function Leaderboard() {
           return hasQ || hasR || hasS;
         });
 
-        setActiveRaces(filteredRaces);
+        // CRUCIAAL: Draai de volgorde om zodat de nieuwste race vooraan staat
+        setActiveRaces([...filteredRaces].reverse());
 
         const fullEntries: LeaderboardEntry[] = board.map(player => {
           const playerScores: LeaderboardEntry["scores"] = {};
@@ -93,13 +95,12 @@ export default function Leaderboard() {
       
       <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] overflow-hidden border border-white/5 transition-all">
         
-        {/* Header compacter gemaakt: p-6 naar p-4 */}
         <div className="p-4 pb-2 border-b border-white/5">
           <h2 className="font-f1 text-xl font-black italic uppercase tracking-tighter text-white leading-none">
             F1 <span className="text-[#e10600]">Stand</span>
           </h2>
           <p className="text-[9px] text-slate-500 uppercase font-bold mt-1 tracking-widest italic">
-            Algemeen klassement & sessie overzicht
+            Nieuwste resultaten vooraan
           </p>
         </div>
 
@@ -107,10 +108,9 @@ export default function Leaderboard() {
           <table className="w-full text-left border-separate border-spacing-0 min-w-max">
             <thead>
               <tr className="bg-white/5 text-[10px] font-f1 uppercase tracking-widest text-slate-400">
-                {/* Header padding verlaagd van py-4 naar py-2 */}
-                <th className="sticky left-0 z-20 bg-[#1c212c] py-2 px-2 font-black w-8 text-center border-b border-white/5">#</th>
-                <th className="sticky left-8 z-20 bg-[#1c212c] py-2 px-4 font-black min-w-[120px] border-b border-white/5">NAAM</th>
-                <th className="sticky left-[152px] z-20 bg-[#222834] py-2 px-3 text-center font-black text-green-400 border-b border-white/5 border-r-2 border-green-500/50 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)]">TOT</th>
+                <th className="sticky left-0 z-30 bg-[#1c212c] py-2 px-2 font-black w-8 text-center border-b border-white/5">#</th>
+                <th className="sticky left-8 z-30 bg-[#1c212c] py-2 px-4 font-black min-w-[120px] border-b border-white/5">NAAM</th>
+                <th className="sticky left-[152px] z-30 bg-[#222834] py-2 px-3 text-center font-black text-green-400 border-b border-white/5 border-r-2 border-green-500/50 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)]">TOT</th>
                 
                 {activeRaces.map(race => (
                   <th key={race.id} colSpan={race.has_sprint ? 3 : 2} className="py-2 px-2 text-center border-l border-white/10 font-black text-white bg-black/20 border-b border-white/5 text-[11px] tracking-tighter">
@@ -119,9 +119,9 @@ export default function Leaderboard() {
                 ))}
               </tr>
               <tr className="text-[11px] font-f1 uppercase text-slate-500 bg-black/10">
-                <th className="sticky left-0 z-20 bg-[#1c212c] border-b border-white/5"></th>
-                <th className="sticky left-8 z-20 bg-[#1c212c] border-b border-white/5"></th>
-                <th className="sticky left-[152px] z-20 bg-[#222834] border-b border-white/5 border-r-2 border-green-500/50"></th>
+                <th className="sticky left-0 z-30 bg-[#1c212c] border-b border-white/5"></th>
+                <th className="sticky left-8 z-30 bg-[#1c212c] border-b border-white/5"></th>
+                <th className="sticky left-[152px] z-30 bg-[#222834] border-b border-white/5 border-r-2 border-green-500/50"></th>
                 {activeRaces.map(race => (
                   <Fragment key={`sub-${race.id}`}>
                     {race.has_sprint && <th className="py-1 text-center border-l border-white/10 w-10 text-orange-400 border-b border-white/5 font-black text-xs">S</th>}
@@ -135,7 +135,6 @@ export default function Leaderboard() {
             <tbody className="divide-y divide-white/5">
               {entries.map((index_entry, index) => (
                 <tr key={index_entry.user_id} className="hover:bg-white/5 transition-colors group">
-                  {/* Cel padding verlaagd van py-4 naar py-2 */}
                   <td className="sticky left-0 z-10 bg-[#161a23] py-2 px-2 text-center border-b border-white/5 group-hover:bg-[#1c222d]">
                     <span className={`font-f1 italic font-black text-[10px] ${
                       index === 0 ? "text-yellow-500" : index === 1 ? "text-slate-300" : index === 2 ? "text-orange-400" : "text-slate-600"
