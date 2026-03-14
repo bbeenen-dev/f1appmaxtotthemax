@@ -13,10 +13,12 @@ export default async function NextEventCard() {
   
   const bufferTime = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
 
+  // Aanpassing: Filter toegevoegd op status 'scheduled'
   const { data: race } = await supabase
     .from('races')
     .select('*')
-    .gt('race_start', bufferTime) 
+    .gt('race_start', bufferTime)
+    .eq('status', 'scheduled') 
     .order('race_start', { ascending: true })
     .limit(1)
     .single();
@@ -44,10 +46,6 @@ export default async function NextEventCard() {
   const needsSprint = !!race.has_sprint;
   const isComplete = needsSprint ? (hasQualy && hasRace && hasSprint) : (hasQualy && hasRace);
 
-  /**
-   * Helper voor tijdnotatie met correcte tijdzone conversie (Europa/Amsterdam)
-   * Dit lost het probleem op waarbij tijden 1 of 2 uur te vroeg werden getoond.
-   */
   const formatSessionTime = (dateStr: string | null) => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
@@ -108,7 +106,6 @@ export default async function NextEventCard() {
         </div>
       </div>
 
-      {/* TIJDENSCHEMA SECTIE - Lettertype vergroot naar text-xs en tijdzone-proof */}
       <div className="grid grid-cols-5 gap-1 mb-6 relative z-10 border-t border-white/5 pt-4">
         <div className="flex flex-col">
           <span className="text-[7px] text-slate-500 uppercase font-black">FP1</span>
