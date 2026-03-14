@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { headers } from 'next/headers';
+import Link from 'next/link'; // Import toegevoegd
 
 export default async function InfoPage() {
   await headers();
@@ -151,6 +152,32 @@ export default async function InfoPage() {
                 </p>
               </div>
             </div>
+          </section>
+
+          {/* SECTIE: SUPPORT (NIEUW) */}
+          <section className="mt-12 pt-12 border-t border-slate-800/50">
+            <h2 className="font-f1 text-3xl font-black italic uppercase tracking-tight mb-8">
+              Support
+            </h2>
+            
+            <Link href="/info/complaints" className="group block relative">
+              <div className="relative bg-[#161a23] p-6 rounded-2xl border border-slate-800 group-hover:border-[#e10600]/50 transition-all shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-[#e10600]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-f1 font-black italic uppercase text-white group-hover:text-[#e10600] transition-colors">
+                      Klachten indienen
+                    </h3>
+                    <p className="text-slate-400 text-sm font-medium italic mt-1 uppercase tracking-wider">
+                      Speciaal voor Happie
+                    </p>
+                  </div>
+                  <span className="text-[#e10600] text-2xl font-f1 font-black italic transform group-hover:translate-x-2 transition-transform">
+                    →
+                  </span>
+                </div>
+              </div>
+            </Link>
           </section>
 
         </div>
