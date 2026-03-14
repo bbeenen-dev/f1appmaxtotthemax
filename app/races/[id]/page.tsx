@@ -37,7 +37,12 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true);
   const [isChangingTab, setIsChangingTab] = useState(false);
   const [status, setStatus] = useState({ qualy: false, sprint: false, race: false });
+  
+  // States voor resultaat-checks per sessie
+  const [resultsAvailable, setResultsAvailable] = useState({ qualy: false, sprint: false, race: false });
+  const [hasAnyResults, setHasAnyResults] = useState(false);
   const [isWeekendFinished, setIsWeekendFinished] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'sprint' | 'qualy' | 'race'>('qualy');
   const [gridData, setGridData] = useState<GridPrediction[]>([]);
   const [now, setNow] = useState(new Date());
@@ -59,14 +64,25 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
         setRace(raceData);
         
         const needsSprint = !!raceData.sprint_race_start;
-        const { data: resQ } = await supabase.from('results_qualifying').select('id').eq('race_id', raceId).maybeSingle();
-        const { data: resR } = await supabase.from('results_race').select('id').eq('race_id', raceId).maybeSingle();
-        const { data: resS } = needsSprint 
-          ? await supabase.from('results_sprint').select('id').eq('race_id', raceId).maybeSingle()
-          : { data: { id: 'none' } };
+        
+        // Check per sessie of er resultaten zijn
+        const [resQ, resR, resS] = await Promise.all([
+          supabase.from('results_qualifying').select('id').eq('race_id', raceId).maybeSingle(),
+          supabase.from('results_race').select('id').eq('race_id', raceId).maybeSingle(),
+          needsSprint 
+            ? supabase.from('results_sprint').select('id').eq('race_id', raceId).maybeSingle()
+            : Promise.resolve({ data: null })
+        ]);
 
-        const finished = !!resQ && !!resR && !!resS;
-        setIsWeekendFinished(finished);
+        const qDone = !!resQ.data;
+        const rDone = !!resR.data;
+        const sDone = needsSprint ? !!resS.data : false;
+
+        setResultsAvailable({ qualy: qDone, race: rDone, sprint: sDone });
+        setHasAnyResults(qDone || rDone || sDone);
+        
+        // Weekend is pas klaar als alles wat moet gebeuren ook een resultaat heeft
+        setIsWeekendFinished(qDone && rDone && (needsSprint ? sDone : true));
         
         if (raceData.sprint_race_start) {
           setActiveTab('sprint');
@@ -123,15 +139,19 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
 
   if (loading) return <div className="min-h-screen bg-[#0f111a] flex items-center justify-center font-f1 italic text-[#e10600]">LOADING...</div>;
 
-  const renderPredictionCards = () => (
-    <>
-      {race?.sprint_race_start && (
-        <PredictionCard title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />
-      )}
-      <PredictionCard title="Kwalificatie" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />
-      <PredictionCard title="Hoofd Race" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />
-    </>
-  );
+  // Helper om te bepalen welke kaart waar getoond moet worden
+  const renderCard = (type: 'sprint' | 'qualy' | 'race') => {
+    if (type === 'sprint' && race?.sprint_race_start) {
+        return <PredictionCard key="sprint" title="Sprint Race" subtitle="Voorspel de Top 8" href={`/races/${raceId}/predict/sprint`} isDone={status.sprint} accentColor="bg-orange-500" />;
+    }
+    if (type === 'qualy') {
+        return <PredictionCard key="qualy" title="Kwalificatie" subtitle="Voorspel de Top 3" href={`/races/${raceId}/predict/qualy`} isDone={status.qualy} accentColor="bg-red-600" />;
+    }
+    if (type === 'race') {
+        return <PredictionCard key="race" title="Hoofd Race" subtitle="Voorspel de Top 10" href={`/races/${raceId}/predict/race`} isDone={status.race} accentColor="bg-[#e10600]" />;
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-[#0f111a] text-white p-4 pb-32 overflow-x-hidden">
@@ -145,7 +165,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           <p className="text-slate-400 text-xs font-f1 uppercase tracking-[0.3em] mt-3 italic">{race?.city_name}</p>
         </header>
 
-        {isWeekendFinished && (
+        {hasAnyResults && (
           <Link 
             href={`/races/${raceId}/myscores`}
             className="w-full mb-6 bg-green-600 hover:bg-green-500 text-white font-f1 font-black italic uppercase p-5 rounded-2xl transition-all flex justify-between items-center shadow-xl shadow-green-900/20"
@@ -153,7 +173,9 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
             <div className="flex items-center gap-4">
               <span className="text-2xl">🏆</span>
               <div className="text-left">
-                <span className="block text-sm leading-none opacity-80 mb-1">Resultaten bekend</span>
+                <span className="block text-sm leading-none opacity-80 mb-1">
+                    {isWeekendFinished ? "Resultaten definitief" : "Tussentijdse scores beschikbaar"}
+                </span>
                 <span className="text-xl leading-none">Mijn Behaalde Punten</span>
               </div>
             </div>
@@ -161,12 +183,17 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </Link>
         )}
 
-        {!isWeekendFinished && (
-          <div className="grid gap-4 mb-8">
-            {renderPredictionCards()}
+        {/* ACTIEVE VOORSPELLINGEN: Alleen tonen als er nog GEEN resultaat voor is */}
+        <div className="grid gap-4 mb-8">
+          {!resultsAvailable.sprint && renderCard('sprint')}
+          {!resultsAvailable.qualy && renderCard('qualy')}
+          {!resultsAvailable.race && renderCard('race')}
+          
+          {/* Live tracker altijd bovenin zolang het weekend nog bezig is */}
+          {!isWeekendFinished && (
             <LiveCard title="Live Tracker" subtitle="REAL-TIME • Virtuele Stand" href={`/races/${raceId}/live`} accentColor="#005AFF" />
-          </div>
-        )}
+          )}
+        </div>
 
         <section className="bg-[#161a23] rounded-2xl p-4 md:p-6 border border-slate-800/50 w-[96vw] ml-[calc(50%-48vw)] md:w-full md:ml-0">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
@@ -197,7 +224,6 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      {/* HEADERS VERGROOT */}
                       <th className="sticky left-0 z-20 bg-[#161a23] px-3 py-4 text-xs font-f1 uppercase text-slate-500 min-w-[120px] shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)]">Deelnemer</th>
                       {gridData[0]?.drivers.map((_, i) => (
                         <th key={i} className="px-3 py-4 text-xs font-f1 uppercase text-[#e10600] text-center font-black min-w-[70px]">P{i+1}</th>
@@ -208,11 +234,9 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
                   <tbody className="divide-y divide-slate-800/20">
                     {gridData.length > 0 ? gridData.map((row) => (
                       <tr key={row.user_id} className="group hover:bg-white/5 transition-colors">
-                        {/* NICKNAMES IETS GROTER */}
                         <td className="sticky left-0 z-20 bg-[#161a23] px-3 py-5 text-sm font-f1 font-black italic uppercase text-white truncate border-r border-slate-800/30 shadow-[8px_0_12px_-5px_rgba(0,0,0,0.4)] group-hover:text-[#e10600]">
                           {row.nickname}
                         </td>
-                        {/* DRIVER CODES VERGROOT NAAR TEXT-XS */}
                         {row.drivers.map((d, i) => (
                           <td key={i} className="px-3 py-5 text-xs font-f1 font-bold text-center uppercase text-slate-300 tracking-wider">{d || '-'}</td>
                         ))}
@@ -230,14 +254,17 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
           </div>
         </section>
 
-        {isWeekendFinished && (
+        {/* ARCHIEF SECTIE: Items die al een resultaat hebben verhuizen naar hier */}
+        {hasAnyResults && (
             <div className="mt-12 space-y-4">
                 <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xs font-f1 font-black uppercase italic text-slate-600">Mijn Inzendingen</h3>
+                    <h3 className="text-xs font-f1 font-black uppercase italic text-slate-600">Afgeronde Sessies</h3>
                     <div className="h-[1px] flex-grow bg-slate-800/40"></div>
                 </div>
                 <div className="grid gap-4 opacity-70 hover:opacity-100 transition-opacity">
-                    {renderPredictionCards()}
+                    {resultsAvailable.sprint && renderCard('sprint')}
+                    {resultsAvailable.qualy && renderCard('qualy')}
+                    {resultsAvailable.race && renderCard('race')}
                 </div>
             </div>
         )}
@@ -246,8 +273,7 @@ export default function RaceCardPage({ params }: { params: Promise<{ id: string 
   );
 }
 
-// --- DEZE COMPONENTEN MOETEN ONDERAAN STAAN OM DE FOUT OP TE LOSSEN ---
-
+// --- HELPERS ---
 function LiveCard({ title, subtitle, href, accentColor }: { title: string, subtitle: string, href: string, accentColor: string }) {
   return (
     <Link href={href} className="group block relative">
