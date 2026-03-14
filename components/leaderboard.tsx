@@ -36,11 +36,13 @@ export default function Leaderboard() {
   useEffect(() => {
     async function fetchFullLeaderboard() {
       setLoading(true);
+      
+      // 1. Haal alle races op, chronologisch gesorteerd (oud naar nieuw)
+      // De filter op 'race_start' is verwijderd zodat races met vroege scores altijd zichtbaar zijn
       const { data: races } = await supabase
         .from("races")
         .select("id, slug, has_sprint, race_start")
-        .lte("race_start", new Date().toISOString())
-        .order("race_start", { ascending: false });
+        .order("race_start", { ascending: true });
 
       const { data: board } = await supabase
         .from("leaderboard")
@@ -54,6 +56,7 @@ export default function Leaderboard() {
       ]);
 
       if (board && races) {
+        // 2. Filter races: toon alleen de races waarvoor daadwerkelijk scores bestaan
         const filteredRaces = races.filter(race => {
           const hasQ = qScores.data?.some(s => s.race_id === race.id);
           const hasR = rScores.data?.some(s => s.race_id === race.id);
@@ -89,12 +92,10 @@ export default function Leaderboard() {
 
   return (
     <section className="group relative p-[1px] rounded-3xl overflow-hidden shadow-2xl">
-      {/* De subtiele gradiënt rand die past bij de rest van de homepagina */}
       <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_50%,#e10600_0deg,#e10600_40deg,transparent_90deg)] opacity-40" />
       
       <div className="relative bg-[#161a23] rounded-[calc(1.5rem-1px)] overflow-hidden border border-white/5 transition-all">
         
-        {/* TITEL SECTIE - Nu binnen het segment */}
         <div className="p-6 pb-2 border-b border-white/5">
           <h2 className="font-f1 text-2xl font-black italic uppercase tracking-tighter text-white leading-none">
             F1 <span className="text-[#e10600]">Stand</span>
@@ -104,7 +105,6 @@ export default function Leaderboard() {
           </p>
         </div>
 
-        {/* TABEL SECTIE */}
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left border-separate border-spacing-0 min-w-max">
             <thead>
@@ -176,7 +176,6 @@ export default function Leaderboard() {
           </table>
         </div>
         
-        {/* LEGENDA - Ook binnen de kaart voor een opgeruimd geheel */}
         <div className="bg-black/20 p-3">
           <p className="text-[10px] text-slate-600 uppercase font-black italic text-right px-4 tracking-widest">
             S = Sprint | Q = Qualy | R = Race
