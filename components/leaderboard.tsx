@@ -11,6 +11,7 @@ interface RaceInfo {
   slug: string;
   has_sprint: boolean;
   race_start: string;
+  status: string; // Toegevoegd voor de status-check
 }
 
 interface LeaderboardEntry {
@@ -37,9 +38,11 @@ export default function Leaderboard() {
     async function fetchFullLeaderboard() {
       setLoading(true);
       
+      // Stap 1: Haal alleen de races op die de status 'scheduled' hebben
       const { data: races } = await supabase
         .from("races")
-        .select("id, slug, has_sprint, race_start")
+        .select("id, slug, has_sprint, race_start, status")
+        .eq("status", "scheduled") 
         .order("race_start", { ascending: true });
 
       const { data: board } = await supabase
@@ -54,7 +57,7 @@ export default function Leaderboard() {
       ]);
 
       if (board && races) {
-        // Filter races waar al scores voor zijn (of die gestart zijn)
+        // Stap 2: Filter binnen de 'scheduled' races alleen diegene waar al scores voor zijn
         const filteredRaces = races.filter(race => {
           const hasQ = qScores.data?.some(s => s.race_id === race.id);
           const hasR = rScores.data?.some(s => s.race_id === race.id);
@@ -62,7 +65,7 @@ export default function Leaderboard() {
           return hasQ || hasR || hasS;
         });
 
-        // CRUCIAAL: Draai de volgorde om zodat de nieuwste race vooraan staat
+        // Stap 3: Zet de nieuwste resultaten vooraan (naast de TOT kolom)
         setActiveRaces([...filteredRaces].reverse());
 
         const fullEntries: LeaderboardEntry[] = board.map(player => {
@@ -99,7 +102,9 @@ export default function Leaderboard() {
           <h2 className="font-f1 text-xl font-black italic uppercase tracking-tighter text-white leading-none">
             F1 <span className="text-[#e10600]">Stand</span>
           </h2>
-         
+          <p className="text-[9px] text-slate-500 uppercase font-bold mt-1 tracking-widest italic">
+            Meest recente resultaten vooraan
+          </p>
         </div>
 
         <div className="overflow-x-auto overflow-y-hidden">
