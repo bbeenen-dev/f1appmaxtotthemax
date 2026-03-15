@@ -13,13 +13,13 @@ export default function LiveLeaderboard({
   leaderboard: any[] 
 }) {
   const [liveScores, setLiveScores] = useState(initialScores);
+  
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
   useEffect(() => {
-    // Luister naar veranderingen in de 'actual_scores' tabel voor deze race
     const channel = supabase
       .channel('realtime-live-scores')
       .on('postgres_changes', { 
@@ -28,7 +28,6 @@ export default function LiveLeaderboard({
         table: 'actual_scores',
         filter: `race_id=eq.${raceId}`
       }, async () => {
-        // Als er iets verandert (door de Cronjob), haal de nieuwste scores op
         const { data } = await supabase
           .from('actual_scores')
           .select('*')
@@ -41,7 +40,6 @@ export default function LiveLeaderboard({
     return () => { supabase.removeChannel(channel); };
   }, [raceId, supabase]);
 
-  // Bereken de virtuele stand (zelfde logica als je had, maar nu reactief)
   const liveStanding = (leaderboard || []).map(user => {
     const currentRacePoints = liveScores?.find(s => s.user_id === user.user_id)?.points || 0;
     return {
@@ -53,23 +51,37 @@ export default function LiveLeaderboard({
 
   return (
     <div className="bg-[#161a23] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-      <table className="w-full text-left">
+      <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-[#1c222d] text-slate-500 text-[9px] uppercase tracking-widest">
-            <th className="p-5 font-black">Pos</th>
+          <tr className="bg-[#1c222d] text-slate-500 text-[9px] uppercase tracking-widest border-b border-slate-800">
+            <th className="p-5 font-black w-16">Pos</th>
             <th className="p-5 font-black">Deelnemer</th>
             <th className="p-5 text-right font-black">Totaal (V)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/50">
           {liveStanding.map((user, index) => (
-            <tr key={user.user_id} className="hover:bg-[#1c222d] transition-colors border-l-2 border-transparent hover:border-[#005AFF]">
-              <td className="p-5 font-black italic text-[#005AFF]">{index + 1}</td>
-              <td className="p-5 font-black uppercase text-sm italic">{user.username}</td>
+            <tr key={user.user_id} className="hover:bg-[#1c222d]/50 transition-all duration-500">
+              <td className="p-5 font-black italic text-[#005AFF] text-lg">
+                {index + 1}
+              </td>
+              <td className="p-5">
+                <div className="flex flex-col">
+                  <span className="font-black uppercase text-sm italic tracking-tight text-white">
+                    {/* We checken op beide mogelijke namen uit je database */}
+                    {user.nickname || user.username || user.display_name || 'Racer'}
+                  </span>
+                  <span className="text-[7px] text-slate-500 uppercase tracking-widest mt-0.5">
+                    F1 Deelnemer
+                  </span>
+                </div>
+              </td>
               <td className="p-5 text-right">
                 <div className="flex flex-col items-end">
-                  <span className="font-black text-xl italic leading-none">{user.virtualTotal}</span>
-                  <span className="text-[8px] text-green-500 font-bold uppercase mt-1">
+                  <span className="font-black text-xl italic leading-none text-white">
+                    {user.virtualTotal}
+                  </span>
+                  <span className="text-[8px] text-green-500 font-bold uppercase tracking-tighter mt-1">
                     +{user.currentRacePoints} live
                   </span>
                 </div>
