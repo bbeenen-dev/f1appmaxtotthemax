@@ -41,7 +41,9 @@ export default function LiveLeaderboard({
   }, [raceId, supabase]);
 
   const liveStanding = (leaderboard || []).map(user => {
-    const currentRacePoints = liveScores?.find(s => s.user_id === user.user_id)?.points || 0;
+    // CRUCIALE FIX: We koppelen 'user_id' uit de scores aan 'id' uit jouw profiles tabel
+    const currentRacePoints = liveScores?.find(s => s.user_id === user.id)?.points || 0;
+    
     return {
       ...user,
       currentRacePoints,
@@ -61,15 +63,16 @@ export default function LiveLeaderboard({
         </thead>
         <tbody className="divide-y divide-slate-800/50">
           {liveStanding.map((user, index) => (
-            <tr key={user.user_id} className="hover:bg-[#1c222d]/50 transition-all duration-500">
+            // We gebruiken user.id als key omdat user_id niet bestaat in jouw tabel
+            <tr key={user.id} className="hover:bg-[#1c222d]/50 transition-all duration-500">
               <td className="p-5 font-black italic text-[#005AFF] text-lg">
                 {index + 1}
               </td>
               <td className="p-5">
                 <div className="flex flex-col">
                   <span className="font-black uppercase text-sm italic tracking-tight text-white">
-                    {/* We checken op beide mogelijke namen uit je database */}
-                    {user.nickname || user.username || user.display_name || 'Racer'}
+                    {/* Gebruik nickname of de 'urer_name' uit je database */}
+                    {user.nickname || user.urer_name || 'Racer'}
                   </span>
                   <span className="text-[7px] text-slate-500 uppercase tracking-widest mt-0.5">
                     F1 Deelnemer
