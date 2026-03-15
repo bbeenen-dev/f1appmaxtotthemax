@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   try {
     // 1. DYNAMISCHE RACE ZOEKEN
     const now = new Date();
-    // We kijken 15 minuten in de toekomst
+    // We kijken 15 minuten in de toekomst om races die bijna starten op te pikken
     const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
     
     const { data: activeRace, error: raceError } = await supabase
@@ -31,24 +31,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ 
         success: true,
         status: "IDLE",
-        message: "Geen race gevonden met een geldige session key." 
+        message: "Geen race gevonden met een geldige session key in de nabije toekomst of het recente verleden." 
       });
     }
 
-    // --- TIJDSCHECK: Verruimd naar 24 uur voor naderhand syncen ---
+    // --- TIJDSCHECK: Verruimd naar 48 uur om API-storingen op te vangen ---
     const raceStartTime = new Date(activeRace.race_start).getTime();
     const currentTime = now.getTime();
     const vijftienMinutenInMs = 15 * 60 * 1000;
-    const vierentwintigUurInMs = 24 * 60 * 60 * 1000; // Verhoogd van 3 naar 24 uur
+    const achtenveertigUurInMs = 48 * 60 * 60 * 1000; // Ruime marge voor China-storing
 
     const isTeVroeg = currentTime < (raceStartTime - vijftienMinutenInMs);
-    const isTeLaat = currentTime > (raceStartTime + vierentwintigUurInMs);
+    const isTeLaat = currentTime > (raceStartTime + achtenveertigUurInMs);
 
     if (isTeVroeg || isTeLaat) {
       return NextResponse.json({ 
         success: true, 
-        status: "IDLE",
-        message: isTeVroeg ? "Race start nog niet." : "Race is langer dan 24 uur geleden gestart." 
+        status: "IDLE", 
+        message: isTeVroeg ? "Race start nog niet." : "Race is langer dan 48 uur geleden gestart." 
       });
     }
 
@@ -69,11 +69,12 @@ export async function GET(request: Request) {
       }
     });
 
-    // 3. HAAL DE LIVE DATA (Gecorrigeerd: positions met een 's' en backticks)
+    // 3. HAAL DE LIVE DATA (Positions met een 's' en backticks voor template literal)
     const response = await fetch(`https://api.openf1.org/v1/positions?session_key=${sessionKey}`);
     
     if (!response.ok) {
-      throw new Error(`OpenF1 API status fout: ${response.status}`);
+      // Als de API 502 geeft, vangen we dat hier op
+      throw new Error(`OpenF1 API status fout: ${response.status} (Mogelijk server overbelast)`);
     }
 
     const apiData = await response.json();
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ 
         success: true, 
         status: "LIVE_NO_DATA", 
-        message: "API verbonden, maar geen posities beschikbaar voor deze sessie." 
+        message: "API verbonden, maar nog geen posities beschikbaar voor deze sessie." 
       });
     }
 
