@@ -220,16 +220,17 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="flex gap-3 mt-auto relative z-10">
+                    
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
+                      <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
+                    </div>
                     {needsSprint && (
                       <div className="flex flex-col gap-1">
                         <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Sprint</span>
                         <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasSprint ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
                       </div>
                     )}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Qualy</span>
-                      <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasQualy ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
-                    </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Race</span>
                       <div className={`h-1.5 w-10 rounded-full transition-all duration-500 ${hasRace ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'bg-slate-800'}`} />
