@@ -11,6 +11,7 @@ interface Driver {
     driver_id: string;
     driver_name: string;
     team_id: string;
+    Order?: number; // <-- Toegevoegd
 }
 
 interface RaceData {
@@ -104,12 +105,12 @@ export default function PredictionPage() {
                 }
             }
 
-            // Haal coureurs op
+            // Haal coureurs op, gesorteerd op 'Order'
             const { data: driversData } = await supabase
                 .from("drivers")
-                .select("driver_id, driver_name, team_id")
+                .select("driver_id, driver_name, team_id, Order")
                 .eq("active", true)
-                .order("driver_name", { ascending: true });
+                .order("Order", { ascending: true }); // <-- Aangepast naar "Order"
 
             // Haal bestaande voorspelling op
             const { data: { session } } = await supabase.auth.getSession();
@@ -150,7 +151,7 @@ export default function PredictionPage() {
 
         fetchData();
         return () => { isMounted = false; };
-    }, [raceId, config, supabase]); // config is nu stabiel door useMemo
+    }, [raceId, config, supabase]);
 
     const onDragEnd = (result: DropResult) => {
         if (!result.destination || isPastDeadline) return;
