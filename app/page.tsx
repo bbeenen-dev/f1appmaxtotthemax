@@ -32,6 +32,9 @@ export default async function HomePage() {
     console.error("BTC API Error:", error);
   }
 
+  const winnerAmount = currentEuroValue * 0.8;
+  const runnerUpAmount = currentEuroValue * 0.2;
+
   return (
     <div className="min-h-screen bg-[#0f111a] text-white pb-32 font-f1">
       {/* HERO SECTIE */}
@@ -86,6 +89,27 @@ export default async function HomePage() {
                  </div>
               </div>
             </div>
+
+            {/* WINNAAR EN RUNNER-UP VERDELING */}
+            <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[10px] font-black italic uppercase text-slate-400 tracking-wider block">
+                  Winnaar (80%)
+                </span>
+                <span className="text-xl font-black italic text-white tracking-tighter">
+                  €{winnerAmount.toFixed(2)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-black italic uppercase text-slate-400 tracking-wider block">
+                  Runnerup (20%)
+                </span>
+                <span className="text-xl font-black italic text-white tracking-tighter">
+                  €{runnerUpAmount.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
           </div>
         </section>
 
