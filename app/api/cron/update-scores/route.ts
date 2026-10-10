@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Gebruik Service Role key voor schrijf- en leesrechten vanuit de backend
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Zorg ervoor dat Next.js deze route nooit statisch probeert te bouwen/pre-renderen
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
+    // Check of de vereiste omgevingsvariabelen aanwezig zijn
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { error: "Supabase omgevingsvariabelen ontbreken in de runtime omgeving." },
+        { status: 500 }
+      );
+    }
+
+    // Initialiseer de Supabase client pas binnen de request handler
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
     // ------------------------------------------------------------------------
     // STAP 1: Haal de actieve sessie op van OpenF1 om de actieve race te bepalen
     // ------------------------------------------------------------------------
@@ -19,7 +30,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Geen actieve F1 sessie gevonden via OpenF1" }, { status: 404 });
     }
 
-    const currentSession = sessionData[0]; // Bijv. { location: "Singapore", year: 2026, session_name: "Race" }
+    const currentSession = sessionData[0];
     const sessionYear = currentSession.year;
     const sessionLocation = currentSession.location || currentSession.country_name;
 
@@ -28,7 +39,6 @@ export async function GET(request: Request) {
     // ------------------------------------------------------------------------
     let activeRace: { id: number; name?: string; circuit_name?: string } | null = null;
 
-    // Poging 1: Match op circuit_name
     const { data: raceMatch } = await supabaseAdmin
       .from("races")
       .select("id, name, circuit_name")
@@ -38,12 +48,11 @@ export async function GET(request: Request) {
 
     activeRace = raceMatch;
 
-    // Poging 2 (Fallback): Match op race name als poging 1 geen resultaat geeft
     if (!activeRace) {
       const { data: fallbackRace } = await supabaseAdmin
         .from("races")
         .select("id, name, circuit_name")
-        .eq("season_year", sessionYear)
+        .eq("year", sessionYear)
         .ilike("name", `%${sessionLocation}%`)
         .maybeSingle();
 
@@ -58,7 +67,7 @@ export async function GET(request: Request) {
       }, { status: 404 });
     }
 
-    const raceId: number = activeRace.id; // Jouw interne integer race_id!
+    const raceId: number = activeRace.id;
 
     // ------------------------------------------------------------------------
     // STAP 3: Haal actieve coureurs op via OpenF1 voor de DYNAMISCHE mapping
@@ -70,7 +79,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Geen actieve coureurdata beschikbaar via OpenF1" });
     }
 
-    // Bouw de dynamische DRIVER_MAP op (bijv. { "VER": 1, "NOR": 4, "HAM": 44 })
     const DRIVER_MAP: Record<string, number> = {};
     rawDrivers.forEach((d: any) => {
       if (d.name_acronym && d.driver_number) {
@@ -88,7 +96,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Geen F1 positiedata beschikbaar" });
     }
 
-    // Bewaar per driver_number alleen de meest recente positie
     const latestPositions = new Map<number, number>();
     rawPositions.forEach((p: any) => {
       latestPositions.set(p.driver_number, p.position);
@@ -107,14 +114,14 @@ export async function GET(request: Request) {
     }
 
     // ------------------------------------------------------------------------
-    // STAP 6: Bereken punten per gebruiker (5pt voor exact goed, 2pt voor 1 plek verschil)
+    // STAP 6: Bereken punten per gebruiker
     // ------------------------------------------------------------------------
     const scoreUpdates = predictions.map((pred: any) => {
       let points = 0;
       const top10: string[] = pred.top_10_drivers || [];
 
       top10.forEach((driverCode: string, index: number) => {
-        const predictedPosition = index + 1; // Index 0 = P1, Index 1 = P2 ... Index 9 = P10
+        const predictedPosition = index + 1;
         const driverNumber = DRIVER_MAP[driverCode];
 
         if (driverNumber) {
@@ -124,10 +131,8 @@ export async function GET(request: Request) {
             const diff = Math.abs(predictedPosition - actualPosition);
 
             if (diff === 0) {
-              // Exact goed voorspeld
               points += 5;
             } else if (diff === 1) {
-              // 1 plek verschil (bijv. voorspeld op P10, staat P9 of P11)
               points += 2;
             }
           }
