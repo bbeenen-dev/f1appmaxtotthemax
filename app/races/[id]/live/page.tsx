@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
-import LiveLeaderboard from '@/components/liveleaderboard'; // Check of dit pad klopt
+import LiveLeaderboard from '@/components/liveleaderboard';
 
 export const revalidate = 0;
 
@@ -10,21 +10,23 @@ interface LivePageProps {
 
 export default async function LiveRacePage({ params }: LivePageProps) {
   const { id: raceId } = await params;
+  const numericRaceId = parseInt(raceId, 10);
 
-  if (!raceId) {
-    return <div className="text-white p-10 font-f1">Geen Race ID gevonden.</div>;
+  if (isNaN(numericRaceId)) {
+    return <div className="text-white p-10 font-f1">Ongeldig Race ID.</div>;
   }
 
   const supabase = await createClient();
 
-  // 1. Data ophalen (we halen de blokkerende check op actualResults weg)
-  const { data: leaderboard } = await supabase.from('leaderboard').select('*');
-  const { data: liveScores } = await supabase
-    .from('actual_scores')
-    .select('*')
-    .eq('race_id', raceId);
+  // 1. Data parallel ophalen
+  const [leaderboardRes, liveScoresRes] = await Promise.all([
+    supabase.from('leaderboard').select('*'),
+    supabase.from('actual_scores').select('*').eq('race_id', numericRaceId)
+  ]);
 
-  // We checken nog wel of de raceId überhaupt bestaat in je systeem
+  const leaderboard = leaderboardRes.data;
+  const liveScores = liveScoresRes.data;
+
   if (!leaderboard) {
     return <div className="text-white p-10 font-f1">Data kon niet worden geladen.</div>;
   }
@@ -38,7 +40,7 @@ export default async function LiveRacePage({ params }: LivePageProps) {
           </Link>
           <div className="flex items-center gap-2">
              <span className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">
-               Update: {new Date().toLocaleTimeString()}
+               Update: {new Date().toLocaleTimeString('nl-NL')}
              </span>
              <div className="bg-red-600 px-2 py-0.5 rounded text-[8px] font-black uppercase animate-pulse">Live</div>
           </div>
@@ -49,10 +51,10 @@ export default async function LiveRacePage({ params }: LivePageProps) {
         </h1>
         <p className="text-slate-500 text-[10px] uppercase tracking-[0.3em] mb-8 italic">Virtuele Tussenstand</p>
 
-        {/* Hier roepen we het Client Component aan */}
+        {/* Client Component voor de live updates */}
         <LiveLeaderboard 
           initialScores={liveScores || []} 
-          raceId={raceId} 
+          raceId={numericRaceId} 
           leaderboard={leaderboard} 
         />
 
