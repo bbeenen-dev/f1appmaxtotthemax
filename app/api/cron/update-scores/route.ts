@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const sessionData = await sessionRes.json();
 
     if (!Array.isArray(sessionData) || sessionData.length === 0) {
-      return NextResponse.json({ message: "Geen actieve F1 sessie gevonden via OpenF1" }, { status: 404 });
+      return NextResponse.json({ message: "Geen actieve F1 sessie gevonden via OpenF1" }, { status: 200 });
     }
 
     const currentSession = sessionData[0];
