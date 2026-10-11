@@ -59,7 +59,7 @@ export default async function LiveRacePage({ params }: LivePageProps) {
         />
 
         <p className="text-center text-slate-600 text-[8px] uppercase tracking-widest mt-10 mb-20">
-          De stand wordt automatisch bijgewerkt zodra er posities wisselen.
+          De stand wordt elke 10 seconden automatisch bijgewerkt.
         </p>
       </div>
     </div>
