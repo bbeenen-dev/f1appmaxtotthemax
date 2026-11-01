@@ -73,7 +73,7 @@ export default function LiveLeaderboard({
     return () => clearInterval(intervalId);
   }, [fetchScores]);
 
-  // Bereken de virtuele tussenstand
+  // Bereken de virtuele tussenstand en sorteer op het virtueel totaal (laatste kolom)
   const liveStanding = (leaderboard || []).map(user => {
     const userId = user.id || user.user_id;
 
@@ -91,44 +91,54 @@ export default function LiveLeaderboard({
   }).sort((a, b) => b.virtualTotal - a.virtualTotal);
 
   return (
-    <div className="bg-[#161a23] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+    <div className="bg-[#161a23] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-[#1c222d] text-slate-500 text-[9px] uppercase tracking-widest border-b border-slate-800">
-            <th className="p-5 font-black w-16">Pos</th>
-            <th className="p-5 font-black">Deelnemer</th>
-            <th className="p-5 text-right font-black">Totaal (V)</th>
+          <tr className="bg-[#1c222d] text-slate-400 text-[9px] uppercase tracking-widest border-b border-slate-800">
+            <th className="p-4 font-black">Deelnemer</th>
+            <th className="p-4 text-right font-black">Punten t/m vorige race</th>
+            <th className="p-4 text-right font-black">Virtuele punten race</th>
+            <th className="p-4 text-right font-black text-[#005AFF]">Virtuele totaalstand</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/50">
           {liveStanding.map((user, index) => {
             const displayName = user.nickname || user.urer_name || user.user_name || 'Racer';
             const userId = user.user_id || user.id || `user-${index}`;
+            const basePoints = Number(user.total_points) || 0;
 
             return (
-              <tr key={userId} className="hover:bg-[#1c222d]/50 transition-all duration-500">
-                <td className="p-5 font-black italic text-[#005AFF] text-lg">
-                  {index + 1}
-                </td>
-                <td className="p-5">
-                  <div className="flex flex-col">
-                    <span className="font-black uppercase text-sm italic tracking-tight text-white">
-                      {displayName}
+              <tr key={userId} className="hover:bg-[#1c222d]/50 transition-all duration-300">
+                {/* Kolom 1: Deelnemer (met positienummer) */}
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="font-black italic text-slate-500 text-sm w-6">
+                      {index + 1}.
                     </span>
-                    <span className="text-[7px] text-slate-500 uppercase tracking-widest mt-0.5">
-                      F1 Deelnemer
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-black uppercase text-sm italic tracking-tight text-white">
+                        {displayName}
+                      </span>
+                      <span className="text-[7px] text-slate-500 uppercase tracking-widest mt-0.5">
+                        F1 Deelnemer
+                      </span>
+                    </div>
                   </div>
                 </td>
-                <td className="p-5 text-right">
-                  <div className="flex flex-col items-end">
-                    <span className="font-black text-xl italic leading-none text-white">
-                      {user.virtualTotal}
-                    </span>
-                    <span className="text-[8px] text-green-500 font-bold uppercase tracking-tighter mt-1">
-                      +{user.currentRacePoints} live
-                    </span>
-                  </div>
+
+                {/* Kolom 2: Punten t/m vorige race */}
+                <td className="p-4 text-right font-bold text-slate-300 text-sm">
+                  {basePoints}
+                </td>
+
+                {/* Kolom 3: Virtuele punten race */}
+                <td className="p-4 text-right font-bold text-green-400 text-sm">
+                  +{user.currentRacePoints}
+                </td>
+
+                {/* Kolom 4: Virtuele totaalstand (de sorteerkolom, hoogste bovenaan) */}
+                <td className="p-4 text-right font-black italic text-xl text-white">
+                  {user.virtualTotal}
                 </td>
               </tr>
             );

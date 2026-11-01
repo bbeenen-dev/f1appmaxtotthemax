@@ -51,7 +51,7 @@ export default async function LiveRacePage({ params }: LivePageProps) {
         </h1>
         <p className="text-slate-500 text-[10px] uppercase tracking-[0.3em] mb-8 italic">Virtuele Tussenstand</p>
 
-        {/* Client Component voor de live updates */}
+        {/* Client Component voor de live updates met de 4 kolommen */}
         <LiveLeaderboard 
           initialScores={liveScores || []} 
           raceId={numericRaceId} 
